@@ -1,6 +1,6 @@
 const express = require('express'); //Import the express dependency
 const app = express();              //Instantiate an express app, the main work horse of this server
-const port = 5000;  
+const port = process.env.PORT || 5000;
 
 
 app.get('/', (req, res) => {        //get requests to the root ("/") will route here
