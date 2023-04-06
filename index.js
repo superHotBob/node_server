@@ -47,8 +47,7 @@ app.get('/', (req, res) => {
     res.sendFile('index.html', { root: __dirname });
 });
 
-app.post("/upload", (req, res) => {
-    console.log(req.files.myfile);
+app.post("/upload", (req, res) => {    
     if (!req.files) {
         return res.status(400).send("No files were uploaded.");
     }
