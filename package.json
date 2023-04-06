@@ -12,10 +12,12 @@
   "dependencies": {
     "@pinata/sdk": "^1.1.26",
     "axios": "^0.27.2",
+    "cors": "^2.8.5",
     "express": "^4.18.1",
     "express-fileupload": "^1.4.0",
     "form-data": "^4.0.0",
     "formidable": "^2.1.1",
+    "nodemon": "^2.0.22",
     "sync-request": "^6.1.0"
   }
 }
