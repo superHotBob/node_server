@@ -6,6 +6,16 @@ const fileUpload = require("express-fileupload");
 const fs = require('fs');
 const url = require("url");
 const cors = require('cors');
+const postgres = require('postgres');
+const dotenv = require("dotenv")
+dotenv.config()
+
+const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD, ENDPOINT_ID } = process.env;
+const URL = `postgres://bobozeranski:ZdxF36OgaSAK@ep-yellow-mountain-679652.eu-central-1.aws.neon.tech/neondb?sslmode=require&options=project%3Dep-yellow-mountain-679652`;
+
+const sql = postgres(URL, { ssl: 'require' });
+
+
 
 app.use(cors({
     origin: '*'
@@ -20,6 +30,28 @@ app.use(
     })
 );
 app.use(express.static('public'));
+app.get('/masters',async (req,res)=>{
+    const result = await sql`
+        select 
+        phone,
+        name,
+        nikname
+        from users 
+    `;
+    res.send(result)
+})
+app.get('/clients',async (req,res)=>{
+    const result = await sql`
+        select 
+            phone,
+            status,
+            name,
+            blocked,
+            nikname
+        from clients
+    `;
+    res.send(result)
+})
 app.use('/images', (req, res) => {
     const request = url.parse(req.url, true);
     const action = request.pathname;
@@ -42,7 +74,7 @@ function ReadInDir(req, res) {
 
 app.get('/read', ReadInDir, (req, res) => {
 });
-
+app.use('/', express.static(__dirname + '/build'));
 app.get('/', (req, res) => {
     res.sendFile('index.html', { root: __dirname });
 });
