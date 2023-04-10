@@ -38,7 +38,7 @@ app.use(
     })
 );
 app.use(express.static('public'));
-app.get('/masters', async (req,res)=>{
+app.get('/masters', login, async (req,res)=>{
     const result = await sql`
         select 
         phone,
@@ -49,7 +49,7 @@ app.get('/masters', async (req,res)=>{
     `;
     res.send(result)
 })
-app.get('/clients',async (req,res)=>{
+app.get('/clients',login, async (req,res)=>{
     const result = await sql`
         select 
             phone,
@@ -61,7 +61,7 @@ app.get('/clients',async (req,res)=>{
     `;
     res.send(result)
 })
-app.get('/orders',async (req,res)=>{
+app.get('/orders',login, async (req,res)=>{
     const result = await sql`
         select 
            master,
@@ -94,11 +94,11 @@ function ReadInDir(req, res) {
 app.get('/read', ReadInDir, (req, res) => {
 });
 
-function login(req,res,next) {
-    if( JSON.stringify(req.headers.authorization) === 'bob' ) {
+function login(req,res,next) {    
+    if( JSON.stringify(req.headers.authorization) === '"' + USER + '"' ) {
         next()
     } else {
-       return  res.status(404).send('Not found');
+       return  res.status(404).send('user not found');
     }
    
 }
