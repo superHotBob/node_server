@@ -17,7 +17,8 @@ app.use(bodyParser.json())
 const dotenv = require("dotenv")
 dotenv.config()
 
-const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD, ENDPOINT_ID,PASSWORD, USER } = process.env;
+const { PGUSER, PGPASSWORD, PASSWORD, USER } = process.env;
+
 const URL = `postgres://${PGUSER}:${PGPASSWORD}@ep-yellow-mountain-679652.eu-central-1.aws.neon.tech/neondb?sslmode=require&options=project%3Dep-yellow-mountain-679652`;
 
 const sql = postgres(URL, { ssl: 'require' });
@@ -102,9 +103,9 @@ function login(req,res,next) {
    
 }
 app.use('/', express.static(__dirname + '/build'));
-app.get('/', login, (req, res) => {
-    res.sendFile('index.html', { root: __dirname });
-});
+// app.get('/', (req, res) => {
+//     res.sendFile('index.html', { root: __dirname });
+// });
 app.post('/enter', (req,res)=>{
     if(req.body.name === USER && req.body.password === PASSWORD){
         res.status(200).send({"message":"ok"})
