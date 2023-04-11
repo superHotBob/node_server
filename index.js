@@ -28,8 +28,6 @@ const URL = `postgres://${PGUSER}:${PGPASSWORD}@ep-yellow-mountain-679652.eu-cen
 const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 const sql = postgres(URL, { ssl: 'require' });
 
-
-
 app.use(cors({
     origin: '*'
 }));
@@ -97,14 +95,15 @@ app.get('/orders',login, async (req,res)=>{
 let calls = {}
 const code = 1234
 app.post('/call', apiLimiter ,(req,res)=>{    
-    client.call.send({to: req.body.tel})
-   .then((responce) => {
-        calls[req.body.tel] = +responce.code       
-        res.end("OK")   
-    })
-    // calls[req.body.tel] = 1234
-    //     console.log(calls)
-    //     res.end("OK")    
+//     client.call.send({to: req.body.tel})
+//    .then((responce) => {
+//         calls[req.body.tel] = +responce.code
+//         console.log(responce.code)       
+//         res.end("OK")   
+//     })
+    calls[req.body.tel] = 1234
+        console.log(calls)
+        res.end("OK")    
    
 })
 app.post('/code',(req,res)=>{
