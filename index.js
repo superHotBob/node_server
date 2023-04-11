@@ -7,20 +7,25 @@ const fs = require('fs');
 const url = require("url");
 const cors = require('cors');
 const postgres = require('postgres');
+const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
+const rateLimit = require('express-rate-limit')
+const apiLimiter = rateLimit({
+	windowMs: 1 * 60 * 1000, // 1 minutes
+	max: 3, // Limit each IP to 3 requests per `window` (here, per 15 minutes)
+	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+})
 app.use(bodyParser.urlencoded({
     extended: true
-}))
+}));
+app.use(bodyParser.json());
+const dotenv = require("dotenv");
+dotenv.config();
 
-
-app.use(bodyParser.json())
-const dotenv = require("dotenv")
-dotenv.config()
-
-const { PGUSER, PGPASSWORD, PASSWORD, USER } = process.env;
-
+const { PGUSER, PGPASSWORD, PASSWORD, USER, USERCALL, PASSWORDCALL } = process.env;
 const URL = `postgres://${PGUSER}:${PGPASSWORD}@ep-yellow-mountain-679652.eu-central-1.aws.neon.tech/neondb?sslmode=require&options=project%3Dep-yellow-mountain-679652`;
-
+const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 const sql = postgres(URL, { ssl: 'require' });
 
 
@@ -47,8 +52,15 @@ app.get('/masters', login, async (req,res)=>{
         city
         from users 
     `;
-    res.send(result)
+   
+    if(result) {
+        res.send(result)
+    } else {
+        res.send(JSON.stringify({'message': 'error'}))
+    }
+    
 })
+
 app.get('/clients',login, async (req,res)=>{
     const result = await sql`
         select 
@@ -59,7 +71,12 @@ app.get('/clients',login, async (req,res)=>{
             nikname
         from clients
     `;
-    res.send(result)
+    
+    if(result) {
+        res.send(result)
+    } else {
+        res.send(JSON.stringify({'message': 'error'}))
+    }
 })
 app.get('/orders',login, async (req,res)=>{
     const result = await sql`
@@ -70,7 +87,35 @@ app.get('/orders',login, async (req,res)=>{
             date_create           
         from orders
     `;
-    res.send(result)
+    
+    if(result) {
+        res.send(result)
+    } else {
+        res.send(JSON.stringify({'message': 'error'}))
+    }
+})
+let calls = {}
+const code = 1234
+app.post('/call', apiLimiter ,(req,res)=>{    
+    client.call.send({to: req.body.tel})
+   .then((responce) => {
+        calls[req.body.tel] = +responce.code       
+        res.end("OK")   
+    })
+    // calls[req.body.tel] = 1234
+    //     console.log(calls)
+    //     res.end("OK")    
+   
+})
+app.post('/code',(req,res)=>{
+   console.log(calls[req.body.tel] ===  req.body.number)
+    if ( calls[req.body.tel] === req.body.number) {
+        delete calls === req.body.tel 
+        res.status(200).send("OK")
+    } else {
+        delete calls === req.body.tel 
+        res.status(500).send('Bad')
+    }
 })
 app.use('/images', (req, res) => {
     const request = url.parse(req.url, true);
