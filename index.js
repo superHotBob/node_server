@@ -12,7 +12,7 @@ const bodyParser = require("body-parser");
 const rateLimit = require('express-rate-limit')
 const apiLimiter = rateLimit({
 	windowMs: 1 * 60 * 1000, // 1 minutes
-	max: 3, // Limit each IP to 3 requests per `window` (here, per 15 minutes)
+	max: 1, // Limit each IP to 3 requests per `window` (here, per 15 minutes)
 	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 })
@@ -57,6 +57,14 @@ app.get('/masters', login, async (req,res)=>{
         res.send(JSON.stringify({'message': 'error'}))
     }
     
+})
+app.get('/changeblocked',login, async (req, res)=>{
+    const result = await sql`
+        update clients 
+        set blocked = ${req.query.blocked}
+        where phone = ${req.query.tel}
+    `;
+    res.send('OK')
 })
 
 app.get('/clients',login, async (req,res)=>{
