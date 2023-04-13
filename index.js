@@ -58,6 +58,14 @@ app.get('/masters', login, async (req,res)=>{
     }
     
 })
+app.get('/deletereview', login, async (req,res)=>{
+    const result = await sql`
+        update orders 
+        set review = ''
+        where id = ${req.query.id}
+    `;
+    res.send(result)   
+})
 app.get('/changeblocked',login, async (req, res)=>{
     const result = await sql`
         update clients 
@@ -90,7 +98,9 @@ app.get('/orders',login, async (req,res)=>{
            master,
             client,
             price,
-            date_create           
+            date_create ,
+            review,
+            id          
         from orders
     `;
     
