@@ -47,7 +47,8 @@ app.get('/masters', login, async (req,res)=>{
         phone,
         name,
         nikname,
-        city
+        city,
+        blocked
         from users 
     `;
    
@@ -69,6 +70,12 @@ app.get('/deletereview', login, async (req,res)=>{
 app.get('/changeblocked',login, async (req, res)=>{
     const result = await sql`
         update clients 
+        set blocked = ${req.query.blocked}
+        where phone = ${req.query.tel}
+    `;
+    res.send('OK')
+    const next_result = await sql`
+        update users 
         set blocked = ${req.query.blocked}
         where phone = ${req.query.tel}
     `;
@@ -110,6 +117,28 @@ app.get('/orders',login, async (req,res)=>{
         res.send(JSON.stringify({'message': 'error'}))
     }
 })
+app.get('/message',login, async (req,res)=>{
+    const result = await sql`
+        select *
+          
+        from ms_admin
+    `;
+    
+    if(result) {
+        res.send(result)
+    } else {
+        res.send(JSON.stringify({'message': 'error'}))
+    }
+})
+app.post('/updatemessage',login, async (req,res)=>{
+    const result = await sql`
+    update ms_admin
+    set ms_answer = ${req.body.answer}
+    where id = ${req.body.id}
+    `
+    res.send("Ok")
+})
+
 let calls = {}
 const code = 1234
 app.post('/call', apiLimiter ,(req,res)=>{    
@@ -144,7 +173,7 @@ app.use('/images', (req, res) => {
         });
 });
 function ReadInDir(req, res) {
-    const directoryPath = path.join(__dirname + '/public', 'images');
+    const directoryPath = path.join(__dirname + '/var/data', 'images');
     fs.readdir(directoryPath, { withFileTypes: true }, (err, files) => {
         if (err) {
             return console.log('Unable to scan directory: ' + err);
@@ -153,7 +182,7 @@ function ReadInDir(req, res) {
         res.send(f)
     })
 }
-app.get('/read', ReadInDir, (req, res) => {
+app.get('https://masters-client.onrender.com/read', ReadInDir, (req, res) => {
 });
 
 function login(req,res,next) {    
@@ -165,9 +194,9 @@ function login(req,res,next) {
    
 }
 app.use('/', express.static(__dirname + '/build'));
-// app.get('/', (req, res) => {
-//     res.sendFile('index.html', { root: __dirname });
-// });
+app.get('/super', (req, res) => {
+    res.sendFile('index.html', { root: __dirname });
+});
 app.post('/enter', (req,res)=>{
     if(req.body.name === USER && req.body.password === PASSWORD){
         res.status(200).send({"message":"ok"})
@@ -181,7 +210,7 @@ app.post("/upload", (req, res) => {
     }
 
     const file = req.files.myfile;
-    const path = __dirname + "/public/images/" + file.name;
+    const path = __dirname + "/var/data/" + file.name;
 
     file.mv(path, (err) => {
         if (err) {
