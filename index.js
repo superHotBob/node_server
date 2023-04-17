@@ -16,9 +16,7 @@ const apiLimiter = rateLimit({
 	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 })
-app.use(bodyParser.urlencoded({
-    extended: true
-}));
+app.use(bodyParser.urlencoded({extended: true }));
 app.use(bodyParser.json());
 const dotenv = require("dotenv");
 dotenv.config();
@@ -28,9 +26,7 @@ const URL = `postgres://${PGUSER}:${PGPASSWORD}@ep-yellow-mountain-679652.eu-cen
 const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 const sql = postgres(URL, { ssl: 'require' });
 
-app.use(cors({
-    origin: '*'
-}));
+app.use(cors({origin: '*'}));
 
 app.use(
     fileUpload({
@@ -119,11 +115,9 @@ app.get('/orders',login, async (req,res)=>{
 })
 app.get('/message',login, async (req,res)=>{
     const result = await sql`
-        select *
-          
+        select *          
         from ms_admin
-    `;
-    
+    `;    
     if(result) {
         res.send(result)
     } else {
@@ -131,13 +125,16 @@ app.get('/message',login, async (req,res)=>{
     }
 })
 app.post('/updatemessage',login, async (req,res)=>{
+    console.log(req.body)
     const result = await sql`
     update ms_admin
-    set ms_answer = ${req.body.answer}
+    set answer = ${req.body.answer},
+    date_answer = ${req.body.date}
     where id = ${req.body.id}
     `
     res.send("Ok")
 })
+
 
 let calls = {}
 const code = 1234
