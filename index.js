@@ -117,6 +117,7 @@ app.get('/message',login, async (req,res)=>{
     const result = await sql`
         select *          
         from ms_admin
+        order by ms_date DESC
     `;    
     if(result) {
         res.send(result)
