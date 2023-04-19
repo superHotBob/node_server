@@ -3,6 +3,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 const path = require('path')
 const fileUpload = require("express-fileupload");
+const multer = require('multer')
 const fs = require('fs');
 const url = require("url");
 const cors = require('cors');
@@ -27,15 +28,11 @@ const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 const sql = postgres(URL, { ssl: 'require' });
 
 app.use(cors({origin: '*'}));
-
-app.use(
-    fileUpload({
-        limits: {
-            fileSize: 1024 * 1024 // 1 MB
-        },
-        abortOnLimit: true
-    })
-);
+app.get('/var/data/*',(req,res)=>{
+   let pat = __dirname + req.path
+   console.log(pat)
+   res.sendFile(pat)
+})
 app.use(express.static('public'));
 app.get('/masters', login, async (req,res)=>{
     const result = await sql`
@@ -46,8 +43,7 @@ app.get('/masters', login, async (req,res)=>{
         city,
         blocked
         from users 
-    `;
-   
+    `;   
     if(result) {
         res.send(result)
     } else {
@@ -77,7 +73,6 @@ app.get('/changeblocked',login, async (req, res)=>{
     `;
     res.send('OK')
 })
-
 app.get('/clients',login, async (req,res)=>{
     const result = await sql`
         select 
@@ -87,8 +82,7 @@ app.get('/clients',login, async (req,res)=>{
             blocked,
             nikname
         from clients
-    `;
-    
+    `;    
     if(result) {
         res.send(result)
     } else {
@@ -105,8 +99,7 @@ app.get('/orders',login, async (req,res)=>{
             review,
             id          
         from orders
-    `;
-    
+    `;    
     if(result) {
         res.send(result)
     } else {
@@ -125,8 +118,18 @@ app.get('/message',login, async (req,res)=>{
         res.send(JSON.stringify({'message': 'error'}))
     }
 })
-app.post('/updatemessage',login, async (req,res)=>{
-    console.log(req.body)
+app.get('/create',(req,res)=>{
+    fs.access(__dirname  + `/var/data/${req.query.dir}`,  (err) => {       
+        if (err) { 
+            fs.mkdirSync(__dirname  + `/var/data/${req.query.dir}`);
+           
+            res.send('Dir created')
+        } else {
+            res.send('Dir is good')
+        }
+    });   
+})
+app.post('/updatemessage',login, async (req,res)=>{    
     const result = await sql`
     update ms_admin
     set answer = ${req.body.answer},
@@ -135,8 +138,6 @@ app.post('/updatemessage',login, async (req,res)=>{
     `
     res.send("Ok")
 })
-
-
 let calls = {}
 const code = 1234
 app.post('/call', apiLimiter ,(req,res)=>{    
@@ -161,7 +162,7 @@ app.post('/code',(req,res)=>{
         res.status(500).send('Bad')
     }
 })
-app.use('/images', (req, res) => {
+app.use('/var/data/*', (req, res) => {
     const request = url.parse(req.url, true);
     const action = request.pathname;
     const filePath = path.join(__dirname,action).split("%20").join(" ");
@@ -171,7 +172,7 @@ app.use('/images', (req, res) => {
         });
 });
 function ReadInDir(req, res) {
-    const directoryPath = path.join(__dirname + '/var/data', 'images');
+    const directoryPath = path.join(__dirname + '/var/data');
     fs.readdir(directoryPath, { withFileTypes: true }, (err, files) => {
         if (err) {
             return console.log('Unable to scan directory: ' + err);
@@ -180,7 +181,7 @@ function ReadInDir(req, res) {
         res.send(f)
     })
 }
-app.get('https://masters-client.onrender.com/read', ReadInDir, (req, res) => {
+app.get('/read', ReadInDir, (req, res) => {
 });
 
 function login(req,res,next) {    
@@ -202,20 +203,32 @@ app.post('/enter', (req,res)=>{
         res.status(200).send({"message":"Hello bob"})
     }   
 })
-app.post("/upload", (req, res) => {    
-    if (!req.files) {
-        return res.status(400).send("No files were uploaded.");
+
+
+const storageConfig = multer.diskStorage({
+    destination: (req, file, cb) =>{       
+        cb(null, `var/data/${req.query.name}`);
+    },
+    filename: (req, file, cb) =>{
+        cb(null, file.originalname);
     }
+});
+app.use(multer({storage:storageConfig}).single("file"));
+app.post("/upl",  (req, res) => {   
+    if (!req.file) {
+        res.send("No file upload")
+    } else {
+        res.send('req.file.filename')
+    }
+    // const file = req.files.image;
+    // const path = __dirname + "/var/data/" + file.name;
 
-    const file = req.files.myfile;
-    const path = __dirname + "/var/data/" + file.name;
-
-    file.mv(path, (err) => {
-        if (err) {
-            return res.status(500).send(err);
-        }
-        return res.send({ status: "success", path: path });
-    });
+    // file.mv(path, (err) => {
+    //     if (err) {
+    //         return res.status(500).send(err);
+    //     }
+    //     return res.send({ status: "success", path: path });
+    // });
 });
 
 app.use(express.static(path.join(__dirname, '/public')));
