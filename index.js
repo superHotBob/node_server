@@ -121,7 +121,7 @@ app.get('/message',login, async (req,res)=>{
 app.get('/create',(req,res)=>{
     fs.access(`opt/render/project/var/data/${req.query.dir}`,  (err) => {       
         if (err) { 
-            fs.mkdirSync(`opt/render/project/var/data//${req.query.dir}`);
+            fs.mkdirSync(`opt/render/project/var/data/${req.query.dir}`);
            
             res.send('Dir created')
         } else {
