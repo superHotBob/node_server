@@ -29,7 +29,7 @@ const sql = postgres(URL, { ssl: 'require' });
 
 app.use(cors({origin: '*'}));
 app.get('/var/data/*',(req,res)=>{
-   let pat = __dirname + req.path
+   let pat = __dirname 
    console.log(pat)
    res.sendFile(pat)
 })
@@ -119,9 +119,9 @@ app.get('/message',login, async (req,res)=>{
     }
 })
 app.get('/create',(req,res)=>{
-    fs.access(__dirname  + `/var/data/${req.query.dir}`,  (err) => {       
+    fs.access(`opt/render/project/var/data/${req.query.dir}`,  (err) => {       
         if (err) { 
-            fs.mkdirSync(__dirname  + `/var/data/${req.query.dir}`);
+            fs.mkdirSync(`opt/render/project/var/data//${req.query.dir}`);
            
             res.send('Dir created')
         } else {
@@ -141,9 +141,12 @@ app.post('/updatemessage',login, async (req,res)=>{
 
 app.get('/getsertificats',(req,res)=>{  
     let sertificats = []
-    fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
+    fs.readdirSync('C:/projects/').forEach(file => {
         file.includes('sertificat') ? sertificats.push(file) : null;
     });
+    // fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
+    //     file.includes('sertificat') ? sertificats.push(file) : null;
+    // });
     res.send(sertificats)
 })
 
