@@ -29,7 +29,7 @@ const sql = postgres(URL, { ssl: 'require' });
 
 app.use(cors({origin: '*'}));
 app.get('/var/data/*',(req,res)=>{
-   let pat = __dirname 
+   let pat = __dirname + req.path
    console.log(pat)
    res.sendFile(pat)
 })
