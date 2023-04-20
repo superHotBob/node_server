@@ -10,7 +10,6 @@
   "author": "i",
   "license": "ISC",
   "dependencies": {
-    "@pinata/sdk": "^1.1.26",
     "axios": "^0.27.2",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
