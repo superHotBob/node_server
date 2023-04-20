@@ -138,6 +138,7 @@ app.post('/updatemessage',login, async (req,res)=>{
     `
     res.send("Ok")
 })
+
 app.get('/getsertificats',(req,res)=>{  
     let sertificats = []
     fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
@@ -145,6 +146,7 @@ app.get('/getsertificats',(req,res)=>{
     });
     res.send(sertificats)
 })
+
 let calls = {}
 const code = 1234
 app.post('/call', apiLimiter ,(req,res)=>{    
@@ -159,6 +161,7 @@ app.post('/call', apiLimiter ,(req,res)=>{
         res.end("OK")    
    
 })
+
 app.post('/code',(req,res)=>{
    console.log(calls[req.body.tel] ===  req.body.number)
     if ( calls[req.body.tel] === req.body.number) {
