@@ -149,6 +149,15 @@ app.get('/getsertificats',(req,res)=>{
     // });
     res.send(sertificats)
 })
+app.get('/deletesertificat', (req,res)=>{
+    fs.unlink(__dirname  + '/var/data/'+ req.query.name + '/' + req.query.ser, (err) => {
+        if (err) {
+            throw err;
+        }
+    
+        res.send('Ok')
+    });
+})
 
 let calls = {}
 const code = 1234
