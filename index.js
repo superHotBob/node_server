@@ -138,6 +138,13 @@ app.post('/updatemessage',login, async (req,res)=>{
     `
     res.send("Ok")
 })
+app.get('/getsertificats',(req,res)=>{  
+    let sertificats = []
+    fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
+        file.includes('sertificat') ? sertificats.push(file) : null;
+    });
+    res.send(sertificats)
+})
 let calls = {}
 const code = 1234
 app.post('/call', apiLimiter ,(req,res)=>{    
