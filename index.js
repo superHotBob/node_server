@@ -150,7 +150,7 @@ app.get('/getsertificats',(req,res)=>{
     res.send(sertificats)
 })
 app.get('/deletesertificat', (req,res)=>{
-    fs.unlink(__dirname  + '/var/data/'+ req.query.name + '/' + req.query.ser, (err) => {
+    fs.unlink(__dirname  + '/var/data/'+ req.query.name + '/' + req.query.sertificat, (err) => {
         if (err) {
             throw err;
         }
