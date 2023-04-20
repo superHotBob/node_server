@@ -119,9 +119,9 @@ app.get('/message',login, async (req,res)=>{
     }
 })
 app.get('/create',(req,res)=>{
-    fs.access(`/var/data/${req.query.dir}`,  (err) => {       
+    fs.access(__dirname  + `/var/data/${req.query.dir}`,  (err) => {       
         if (err) { 
-            fs.mkdirSync(`/var/data/${req.query.dir}`);
+            fs.mkdirSync(__dirname  + `/var/data/${req.query.dir}`);
            
             res.send('Dir created')
         } else {
@@ -141,7 +141,7 @@ app.post('/updatemessage',login, async (req,res)=>{
 
 app.get('/getsertificats',(req,res)=>{  
     let sertificats = []
-    fs.readdirSync('C:/projects/').forEach(file => {
+    fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
         file.includes('sertificat') ? sertificats.push(file) : null;
     });
     // fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
