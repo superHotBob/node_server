@@ -143,18 +143,29 @@ app.get('/getsertificats',(req,res)=>{
     let sertificats = []
     fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
         file.includes('sertificat') ? sertificats.push(file) : null;
-    });
-    // fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
-    //     file.includes('sertificat') ? sertificats.push(file) : null;
-    // });
+    });   
     res.send(sertificats)
+})
+app.get('/getlists',(req,res)=>{  
+    let lists = []
+    fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
+        file.includes('list') ? lists.push(file) : null;
+    });   
+    res.send(lists)
 })
 app.get('/deletesertificat', (req,res)=>{
     fs.unlink(__dirname  + '/var/data/'+ req.query.name + '/' + req.query.sertificat, (err) => {
         if (err) {
             throw err;
-        }
-    
+        }    
+        res.send('Ok')
+    });
+})
+app.get('/deletelist', (req,res)=>{
+    fs.unlink(__dirname  + '/var/data/'+ req.query.name + '/' + req.query.list, (err) => {
+        if (err) {
+            throw err;
+        }    
         res.send('Ok')
     });
 })
