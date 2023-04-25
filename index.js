@@ -118,12 +118,20 @@ app.get('/message',login, async (req,res)=>{
         res.send(JSON.stringify({'message': 'error'}))
     }
 })
+
 app.get('/create',(req,res)=>{
     fs.access(__dirname  + `/var/data/${req.query.dir}`,  (err) => {       
         if (err) { 
             fs.mkdirSync(__dirname  + `/var/data/${req.query.dir}`);
+            fs.copyFile((__dirname  + '/main.jpg'), (__dirname  + '/var/data/main.jpg'), (error) => {
+                if (error) {
+                  throw error
+                } else {
+                  console.log('File has been moved to another folder.')
+                }
+            })    
            
-            res.send('Dir created')
+            res.send('Католог создан')
         } else {
             res.send('Dir is good')
         }
