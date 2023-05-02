@@ -118,6 +118,25 @@ app.get('/message',login, async (req,res)=>{
         res.send(JSON.stringify({'message': 'error'}))
     }
 })
+app.get('/deletemaster',login, async (req,res) => {
+    const delete_master = await sql`
+        delete from users
+        where nikname = ${req.query.nikname}
+    `;
+    console.log(delete_master)
+    const delete_client = await sql`
+    delete from clients
+    where nikname = ${req.query.nikname}
+    `;
+    console.log(delete_client)
+    const delete_services = await sql`
+    delete from services
+    where nikname = ${req.query.nikname}
+    `
+    fs.rmSync(__dirname  + `/var/data/${req.query.nikname}`, { recursive: true });
+    console.log(delete_services)
+    res.send("Delete ok")
+})
 
 app.get('/create',(req,res)=>{
     fs.access(__dirname  + `/var/data/${req.query.dir}`,  (err) => {       
@@ -212,18 +231,19 @@ app.use('/var/data/*', (req, res) => {
             res.end(content);
         });
 });
-function ReadInDir(req, res) {
-    const directoryPath = path.join(__dirname + '/var/data');
-    fs.readdir(directoryPath, { withFileTypes: true }, (err, files) => {
-        if (err) {
-            return console.log('Unable to scan directory: ' + err);
-        }
-        let f = files.map(i => i.name)       
-        res.send(f)
-    })
-}
-app.get('/read', ReadInDir, (req, res) => {
-});
+// app.get('/renamefolder', (req,res) => {
+//     const currPath = '/var/data/' + req.query.dir
+//     const newPath = '/var/data/' + req.query.dir.replace('client','master')
+
+//     fs.rename(__dir + currPath, __dir + newPath, function(err) {
+//     if (err) {
+//         console.log(err)
+//     } else {
+//         console.log("Successfully renamed the directory.")
+//     }
+//     })
+// })
+
 
 function login(req,res,next) {    
     if( JSON.stringify(req.headers.authorization) === '"' + USER + '"' ) {
