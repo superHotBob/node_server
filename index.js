@@ -201,8 +201,8 @@ app.get('/deletelist', (req,res)=>{
     });
 })
 app.get('/readtext', (req, res)=>{
-    let new_fle = (req.body.name).replace('jpg','txt')
-    fs.readFile(__dirname  + '/var/data/'+ req.query.name + '/' + new_fle, 'utf8', (err, data) => {
+    let new_fle = (req.query.file).replace('jpg','txt')
+    fs.readFile(__dirname  + '/var/data/' + new_fle, 'utf8', (err, data) => {
         if (err) {
           console.error(err);
           return;
