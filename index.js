@@ -180,7 +180,7 @@ app.get('/getsertificats',(req,res)=>{
 app.get('/getlists',(req,res)=>{  
     let lists = []
     fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
-        file.includes('list') ? lists.push(file) : null;
+        file.includes('list') && file.includes('jpg') ? lists.push(file) : null;
     });   
     res.send(lists)
 })
