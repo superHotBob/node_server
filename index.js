@@ -205,7 +205,7 @@ app.get('/readtext', (req, res)=>{
     fs.readFile(__dirname  + '/var/data/' + new_fle, 'utf8', (err, data) => {
         if (err) {
           console.error(err);
-          return;
+          res.send('');
         }
         console.log(data)
         res.send(data);
