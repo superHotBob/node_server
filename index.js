@@ -123,18 +123,22 @@ app.get('/deletemaster',login, async (req,res) => {
         delete from users
         where nikname = ${req.query.nikname}
     `;
-    console.log(delete_master)
+    console.log('delete_master')
     const delete_client = await sql`
     delete from clients
     where nikname = ${req.query.nikname}
     `;
-    console.log(delete_client)
+    console.log('delete_client')
     const delete_services = await sql`
     delete from services
     where nikname = ${req.query.nikname}
     `
+    const delete_schedule = await sql`
+    delete from schedule
+    where nikname = ${req.query.nikname}
+    `
     fs.rmSync(__dirname  + `/var/data/${req.query.nikname}`, { recursive: true });
-    console.log(delete_services)
+    console.log('delete_folder')
     res.send("Delete ok")
 })
 
@@ -195,6 +199,26 @@ app.get('/deletelist', (req,res)=>{
         }    
         res.send('Ok')
     });
+})
+app.get('/readtext', (req, res)=>{
+    let new_fle = (req.body.name).replace('jpg','txt')
+    fs.readFile(__dirname  + '/var/data/'+ req.query.name + '/' + new_fle, 'utf8', (err, data) => {
+        if (err) {
+          console.error(err);
+          return;
+        }
+        console.log(data)
+        res.send(data);
+      });
+})
+app.post('/createtag',  (req,res)=>{    
+    console.log(req.query.name, req.body)
+    let new_fle = (req.body.name).replace('jpg','txt')
+    fs.writeFile(__dirname  + '/var/data/'+ req.query.name + '/' + new_fle, req.body.text, function (err) {
+        if (err) throw err;
+        console.log('File is created successfully.');
+      });
+    res.send("Ok")
 })
 
 let calls = {}
