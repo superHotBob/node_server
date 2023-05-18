@@ -201,10 +201,7 @@ app.get('/deletelist', (req,res)=>{
     });
 })
 app.get('/readtext', (req, res)=>{
-    let new_fle = (req.query.file).replace('jpg','txt')
-    const { birthtime } = fs.statSync(__dirname  + '/var/data/' + new_fle)
-
-    console.log(birthtime)
+    let new_fle = (req.query.file).replace('jpg','txt')  
     fs.readFile(__dirname  + '/var/data/' + new_fle, 'utf8', (err, data) => {
         if (err) {
           console.error(err);
