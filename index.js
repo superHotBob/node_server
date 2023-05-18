@@ -209,8 +209,7 @@ app.get('/readtext', (req, res)=>{
         if (err) {
           console.error(err);
           res.send('');
-        }
-        console.log(data)
+        }       
         res.send(data);
       });
 })
