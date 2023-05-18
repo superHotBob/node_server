@@ -202,13 +202,16 @@ app.get('/deletelist', (req,res)=>{
 })
 app.get('/readtext', (req, res)=>{
     let new_fle = (req.query.file).replace('jpg','txt')
+    const { birthtime } = fs.statSync(__dirname  + '/var/data/' + new_fle)
+
+    console.log(birthtime)
     fs.readFile(__dirname  + '/var/data/' + new_fle, 'utf8', (err, data) => {
         if (err) {
           console.error(err);
           res.send('');
         }
         console.log(data)
-        res.send(data);
+        res.send(data,birthtime);
       });
 })
 app.post('/createtag',  (req,res)=>{    
