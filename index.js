@@ -211,7 +211,7 @@ app.get('/readtext', (req, res)=>{
           res.send('');
         }
         console.log(data)
-        res.send(data,birthtime);
+        res.send(data);
       });
 })
 app.post('/createtag',  (req,res)=>{    
