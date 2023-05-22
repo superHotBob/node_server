@@ -201,14 +201,18 @@ app.get('/deletelist', (req,res)=>{
     });
 })
 app.get('/readtext', (req, res)=>{
-    let new_fle = (req.query.file).replace('jpg','txt')  
-    fs.readFile(__dirname  + '/var/data/' + new_fle, 'utf8', (err, data) => {
-        if (err) {
-          console.error(err);
-          res.send('');
-        }       
-        res.send(data);
-      });
+    let new_file = (req.query.file).replace('jpg','txt')
+    if(fs.existsSync(new_file)) {       
+        fs.readFile(__dirname  + '/var/data/' + new_file, 'utf8', (err, data) => {
+            if (err) {
+            console.log("File not found");
+            res.send('');
+            }       
+            res.send(data);
+        });
+    } else {
+        res.send('')
+    }    
 })
 app.post('/createtag',  (req,res)=>{    
     console.log(req.query.name, req.body)
@@ -277,9 +281,7 @@ function login(req,res,next) {
    
 }
 app.use('/', express.static(__dirname + '/build'));
-app.get('/super', (req, res) => {
-    res.sendFile('index.html', { root: __dirname });
-});
+
 app.post('/enter', (req,res)=>{
     if(req.body.name === USER && req.body.password === PASSWORD){
         res.status(200).send({"message":"ok"})
@@ -316,6 +318,10 @@ app.post("/upl",  (req, res) => {
 });
 
 app.use(express.static(path.join(__dirname, '/public')));
+app.use((req, res, next) => {
+    res.status(404).send(
+        "<h1 style='text-align: center;margin: 200px auto' >Page not found on the server</h1>")
+});
 app.listen(port, () => {
     console.log(`Now listening on port ${port}`);
 });
