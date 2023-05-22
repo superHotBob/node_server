@@ -202,7 +202,7 @@ app.get('/deletelist', (req,res)=>{
 })
 app.get('/readtext', (req, res)=>{
     let new_file = (req.query.file).replace('jpg','txt')
-    if(fs.existsSync(new_file)) {       
+    if(fs.existsSync(__dirname  + '/var/data/' + new_file)) {       
         fs.readFile(__dirname  + '/var/data/' + new_file, 'utf8', (err, data) => {
             if (err) {
             console.log("File not found");
