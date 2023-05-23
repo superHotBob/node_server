@@ -305,7 +305,7 @@ app.post("/upl",  (req, res) => {
     if (!req.file) {
         res.send("No file upload")
     } else {
-        files.push(req.file.filename)
+        files.push(req.query.name + '/' + req.file.filename)
         res.send('req.file.filename')
     }
     // const file = req.files.image;
