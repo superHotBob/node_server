@@ -299,11 +299,13 @@ const storageConfig = multer.diskStorage({
         cb(null, file.originalname);
     }
 });
+const files = []
 app.use(multer({storage:storageConfig}).single("file"));
 app.post("/upl",  (req, res) => {   
     if (!req.file) {
         res.send("No file upload")
     } else {
+        files.push(req.file.filename)
         res.send('req.file.filename')
     }
     // const file = req.files.image;
@@ -316,6 +318,9 @@ app.post("/upl",  (req, res) => {
     //     return res.send({ status: "success", path: path });
     // });
 });
+app.get('/filesformoderate', (req,res) => {
+    res.send(files)
+})
 
 app.use(express.static(path.join(__dirname, '/public')));
 app.use((req, res, next) => {
