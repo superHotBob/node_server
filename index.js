@@ -173,7 +173,7 @@ app.post('/updatemessage',login, async (req,res)=>{
 app.get('/getsertificats',(req,res)=>{  
     let sertificats = []
     fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
-        file.includes('sertificat') ? sertificats.push(file) : null;
+        file.includes('sertificat') && file.includes('jpg') ? sertificats.push(file) : null;
     });   
     res.send(sertificats)
 })
