@@ -6,6 +6,7 @@ const fileUpload = require("express-fileupload");
 const multer = require('multer')
 const fs = require('fs');
 const url = require("url");
+const IP = require('ip');
 const cors = require('cors');
 const postgres = require('postgres');
 const GreenSMS = require("greensms");
@@ -167,7 +168,7 @@ app.post('/updatemessage',login, async (req,res)=>{
     date_answer = ${req.body.date}
     where id = ${req.body.id}
     `
-    res.send("Ok")
+    res.send("Сообщение изменено")
 })
 
 app.get('/getsertificats',(req,res)=>{  
@@ -200,6 +201,11 @@ app.get('/deletelist', (req,res)=>{
         res.send('Ok')
     });
 })
+
+app.get('/ip',function(req, res) {
+   const ipAddress = IP.address();
+    res.send(`My ip: ${ipAddress}`);
+});
 app.get('/readtext', (req, res)=>{
     let new_file = (req.query.file).replace('jpg','txt')
     if(fs.existsSync(__dirname  + '/var/data/' + new_file)) {       
