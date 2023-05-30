@@ -204,7 +204,7 @@ app.get('/deletelist', (req,res)=>{
 
 app.get('/ip',function(req, res) {
    const ipAddress = IP.address();
-    res.send(`My ip: ${ipAddress}`);
+    res.send(`<h3>My ip: ${ipAddress}</h3>`);
 });
 app.get('/readtext', (req, res)=>{
     let new_file = (req.query.file).replace('jpg','txt')
