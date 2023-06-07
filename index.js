@@ -4,6 +4,7 @@ const port = process.env.PORT || 5000;
 const path = require('path')
 const fileUpload = require("express-fileupload");
 const multer = require('multer')
+const sharp = require("sharp");
 const fs = require('fs');
 const url = require("url");
 const IP = require('ip');
@@ -301,7 +302,11 @@ app.post('/enter', (req,res)=>{
     }   
 })
 
-
+// async function getMetadata(req) {
+//     console.log(req.file)
+//     // const metadata = await sharp(req.file).metadata();
+//     // console.log(metadata);
+//   }
 const storageConfig = multer.diskStorage({
     destination: (req, file, cb) =>{       
         cb(null, `var/data/${req.query.name}`);
