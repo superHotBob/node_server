@@ -111,7 +111,7 @@ app.get('/orders',login, async (req,res)=>{
 app.get('/message',login, async (req,res)=>{
     const result = await sql`
         select *          
-        from ms_admin
+        from adminchat
         order by ms_date DESC
     `;    
     if(result) {
