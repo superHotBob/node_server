@@ -167,12 +167,18 @@ app.get('/create',(req,res)=>{
         }
     });   
 })
-app.post('/updatemessage',login, async (req,res)=>{    
+app.post('/answer_message',login, async (req,res)=>{    
     const result = await sql`
-    update ms_admin
-    set answer = ${req.body.answer},
-    date_answer = ${req.body.date}
-    where id = ${req.body.id}
+    insert into adminchat (recipient,recipient_nikname,sendler,sendler_nikname,ms_text,ms_date,chat) 
+    values (
+      ${req.body.recipient},
+      ${req.body.recipient_nikname},
+      'администратор',
+      'администратор',  
+      ${req.body.ms_text},
+      Date.now(),
+      ${req.body.chat}
+    )  
     `
     res.send("Сообщение изменено")
 })
