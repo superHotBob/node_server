@@ -167,7 +167,8 @@ app.get('/create',(req,res)=>{
         }
     });   
 })
-app.post('/answer_message',login, async (req,res)=>{    
+app.post('/answer_message',login, async (req,res)=>{ 
+    let dt = Date.now()   
     const result = await sql`
     insert into adminchat (recipient,recipient_nikname,sendler,sendler_nikname,ms_text,ms_date,chat) 
     values (
@@ -176,7 +177,7 @@ app.post('/answer_message',login, async (req,res)=>{
       'администратор',
       'администратор',  
       ${req.body.ms_text},
-      Date.now(),
+      ${dt},
       ${req.body.chat}
     )  
     `
