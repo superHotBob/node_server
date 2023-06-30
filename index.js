@@ -82,7 +82,9 @@ app.get('/clients',login, async (req,res)=>{
             status,
             name,
             blocked,
-            nikname
+            nikname,
+            client_password,
+            registration
         from clients
     `;    
     if(result) {
@@ -149,7 +151,7 @@ app.get('/deleteclientfolder',(req,res)=>{
     res.send("Delete ok")
 })
 
-app.get('/create',(req,res)=>{
+app.get('/createclientfolder',(req,res)=>{
     fs.access(__dirname  + `/var/data/${req.query.dir}`,  (err) => {       
         if (err) { 
             fs.mkdirSync(__dirname  + `/var/data/${req.query.dir}`);
