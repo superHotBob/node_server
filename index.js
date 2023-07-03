@@ -61,6 +61,20 @@ app.get('/deletereview', login, async (req,res)=>{
     `;
     res.send(result)   
 })
+app.get('/reviews', login, async (req,res)=>{
+    const result = await sql`
+        select
+        date_order,
+        review,
+        stars,
+        client_name,
+        client
+        from orders
+        where master = ${req.query.name} and review is not null
+    `;
+    res.send(result)   
+})
+
 app.get('/changeblocked',login, async (req, res)=>{
     const result = await sql`
         update clients 
@@ -86,7 +100,34 @@ app.get('/clients',login, async (req,res)=>{
             client_password,
             registration
         from clients
-    `;    
+        ORDER BY 
+            phone	
+        limit ${req.query.limit} offset ${req.query.offset}
+    `;                
+    if(result) {
+        res.send(result)
+    } else {
+        res.send(JSON.stringify({'message': 'error'}))
+    }
+})
+app.get('/find_client',login, async (req,res)=>{
+    const phone = +req.query.phone
+    const nikname = req.query.nikname
+    const result = await sql`
+        select 
+            phone,
+            status,
+            name,
+            blocked,
+            nikname,
+            client_password,
+            registration
+        from clients       
+        where 
+            phone::text like ${phone + '%' }
+            or nikname like ${nikname + '%' }
+           
+    `;                
     if(result) {
         res.send(result)
     } else {
@@ -184,6 +225,23 @@ app.post('/answer_message',login, async (req,res)=>{
     )  
     `
     res.send("Сообщение изменено")
+})
+app.post('/message',login, async (req,res)=>{ 
+    let dt = Date.now()   
+    const result = await sql`
+    insert into chat (recipient,recipient_nikname,sendler,sendler_nikname,ms_text,ms_date,chat,read) 
+    values (
+      ${req.body.recipient},
+      ${req.body.recipient_nikname},
+      'администратор',
+      'администратор',  
+      ${req.body.ms_text},
+      ${dt},
+      0,
+      'false'
+    )  
+    `
+    res.send("Сообщение добавлено")
 })
 
 app.get('/getsertificats',(req,res)=>{  
