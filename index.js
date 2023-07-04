@@ -36,23 +36,23 @@ app.get('/var/data/*',(req,res)=>{
    res.sendFile(pat)
 })
 app.use(express.static('public'));
-app.get('/masters', login, async (req,res)=>{
-    const result = await sql`
-        select 
-        phone,
-        name,
-        nikname,
-        city,
-        blocked
-        from users 
-    `;   
-    if(result) {
-        res.send(result)
-    } else {
-        res.send(JSON.stringify({'message': 'error'}))
-    }
+// app.get('/masters', login, async (req,res)=>{
+//     const result = await sql`
+//         select 
+//         phone,
+//         name,
+//         nikname,
+//         city,
+//         blocked
+//         from users 
+//     `;   
+//     if(result) {
+//         res.send(result)
+//     } else {
+//         res.send(JSON.stringify({'message': 'error'}))
+//     }
     
-})
+// })
 app.get('/deletereview', login, async (req,res)=>{
     const result = await sql`
         update orders 
@@ -88,6 +88,24 @@ app.get('/changeblocked',login, async (req, res)=>{
         where phone = ${req.query.tel}
     `;
     res.send('OK')
+})
+app.get('/countclients',login, async (req,res)=>{
+    const result = await sql`
+        select count(*)
+        from clients    `
+    res.send(result[0].count)
+})
+app.get('/countorders',login, async (req,res)=>{
+    const result = await sql`
+        select count(*)
+        from orders    `
+    res.send(result[0].count)
+})
+app.get('/countmasters',login, async (req,res)=>{
+    const result = await sql`
+        select count(*)
+        from users `
+    res.send(result[0].count)
 })
 app.get('/clients',login, async (req,res)=>{
     const result = await sql`
@@ -134,23 +152,23 @@ app.get('/find_client',login, async (req,res)=>{
         res.send(JSON.stringify({'message': 'error'}))
     }
 })
-app.get('/orders',login, async (req,res)=>{
-    const result = await sql`
-        select 
-           master,
-            client,
-            price,
-            date_create ,
-            review,
-            id          
-        from orders
-    `;    
-    if(result) {
-        res.send(result)
-    } else {
-        res.send(JSON.stringify({'message': 'error'}))
-    }
-})
+// app.get('/orders',login, async (req,res)=>{
+//     const result = await sql`
+//         select 
+//            master,
+//             client,
+//             price,
+//             date_create ,
+//             review,
+//             id          
+//         from orders
+//     `;    
+//     if(result) {
+//         res.send(result)
+//     } else {
+//         res.send(JSON.stringify({'message': 'error'}))
+//     }
+// })
 app.get('/message',login, async (req,res)=>{
     const result = await sql`
         select *          
