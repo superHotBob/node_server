@@ -31,11 +31,11 @@ const sql = postgres(URL, { ssl: 'require' });
 
 app.use(cors({ origin: '*' }));
 app.get('/var/data/*', (req, res) => {
-    let pat = __dirname + req.path
-    console.log(pat)
+    let pat = __dirname + req.path   
     res.sendFile(pat)
 })
 app.use(express.static('public'));
+
 app.get('/find_master', login, async (req, res) => {
     const result = await sql`
         select 
@@ -205,9 +205,24 @@ app.get('/find_client', login, async (req, res) => {
 // })
 app.get('/message', login, async (req, res) => {
     const result = await sql`
-        select *          
-        from adminchat
-        order by ms_date DESC
+    select * from (
+        select distinct on ( chat ) *         
+        from  adminchat       
+        where sendler_nikname  !=  'администратор'        
+        order by chat, ms_date desc
+      ) chat
+    `;
+    if (result) {
+        res.send(result)
+    } else {
+        res.send(JSON.stringify({ 'message': 'error' }))
+    }
+})
+app.get('/chat', login, async (req, res) => {
+    const result = await sql`
+    select * from  adminchat       
+        where sendler_nikname  =  ${req.query.nikname}   or  recipient_nikname =   ${req.query.nikname} 
+       
     `;
     if (result) {
         res.send(result)
