@@ -293,10 +293,11 @@ app.post('/answer_message', login, async (req, res) => {
     `
     res.send("Сообщение изменено")
 })
+
 app.post('/message', login, async (req, res) => {
     let dt = Date.now()
     const result = await sql`
-    insert into chat (recipient,recipient_nikname,sendler,sendler_nikname,ms_text,ms_date,chat,read) 
+    insert into adminchat (recipient,recipient_nikname,sendler,sendler_nikname,ms_text,ms_date,chat,read) 
     values (
       ${req.body.recipient},
       ${req.body.recipient_nikname},
@@ -304,11 +305,11 @@ app.post('/message', login, async (req, res) => {
       'администратор',  
       ${req.body.ms_text},
       ${dt},
-      0,
+      ${req.body.chat},
       'false'
     )  
     `
-    res.send("Сообщение добавлено")
+    res.status(200).send({text:"Сообщение добавлено"})
 })
 
 app.get('/getsertificats', (req, res) => {
