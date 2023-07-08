@@ -49,6 +49,7 @@ app.get('/find_master', login, async (req, res) => {
     `;
     res.send(result)
 })
+
 app.get('/locked', login, async (req, res) => {
     const result = await sql`
         select 
@@ -59,6 +60,7 @@ app.get('/locked', login, async (req, res) => {
     `;
     res.send(result)
 })
+
 app.get('/deletereview', login, async (req, res) => {
     const result = await sql`
         update orders 
@@ -102,6 +104,16 @@ app.get('/blocked', login, async (req, res) => {
         res.send('OK')
     }
 })
+
+app.get('/changerating', login, async (req, res) => {
+    const update_clients = await sql`
+        update clients 
+        set rating = ${req.query.rating}
+        where nikname = ${req.query.name}
+    `;
+   res.send('Ok')   
+})
+
 app.get('/unblocked', login, async (req, res) => {
     const update_clients = await sql`
         update clients 
@@ -123,24 +135,28 @@ app.get('/unblocked', login, async (req, res) => {
         res.send('OK')
     }
 })
+
 app.get('/countclients', login, async (req, res) => {
     const result = await sql`
         select count(*)
         from clients    `
     res.send(result[0].count)
 })
+
 app.get('/countorders', login, async (req, res) => {
     const result = await sql`
         select count(*)
         from orders    `
     res.send(result[0].count)
 })
+
 app.get('/countmasters', login, async (req, res) => {
     const result = await sql`
         select count(*)
         from users `
     res.send(result[0].count)
 })
+
 app.get('/clients', login, async (req, res) => {
     const result = await sql`
         select 
@@ -150,7 +166,8 @@ app.get('/clients', login, async (req, res) => {
             blocked,
             nikname,
             client_password,
-            registration
+            registration,
+            rating
         from clients
         ORDER BY 
             phone	
@@ -162,6 +179,7 @@ app.get('/clients', login, async (req, res) => {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
 })
+
 app.get('/find_client', login, async (req, res) => {
     const phone = +req.query.phone
     const nikname = req.query.nikname
@@ -218,6 +236,7 @@ app.get('/message', login, async (req, res) => {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
 })
+
 app.get('/chat', login, async (req, res) => {
     const result = await sql`
     select * from  adminchat       
@@ -230,6 +249,7 @@ app.get('/chat', login, async (req, res) => {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
 })
+
 app.get('/deletemaster', login, async (req, res) => {
     const delete_master = await sql`
         delete from users
@@ -253,6 +273,7 @@ app.get('/deletemaster', login, async (req, res) => {
     console.log('delete_folder')
     res.send("Delete ok")
 })
+
 app.get('/deleteclientfolder', (req, res) => {
     fs.rmSync(__dirname + `/var/data/${req.query.nikname}`, { recursive: true });
     console.log('delete client folder')
@@ -276,6 +297,15 @@ app.get('/createclientfolder', (req, res) => {
             res.send('Dir is good')
         }
     });
+})
+app.get('/rename_master_dir', (req, res) => {
+    fs.rename(__dirname + '/var/data/' + req.query.oldname, __dirname + '/var/data/' + req.query.newname, function(err) {
+        if (err) {
+          console.log(err)
+        } else {
+          console.log("Successfully renamed the directory.")
+        }
+    })
 })
 app.post('/answer_message', login, async (req, res) => {
     let dt = Date.now()
