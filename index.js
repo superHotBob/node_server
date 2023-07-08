@@ -191,7 +191,8 @@ app.get('/find_client', login, async (req, res) => {
             blocked,
             nikname,
             client_password,
-            registration
+            registration,
+            rating
         from clients       
         where 
             phone::text like ${phone + '%'}
@@ -298,6 +299,7 @@ app.get('/createclientfolder', (req, res) => {
         }
     });
 })
+
 app.get('/rename_master_dir', (req, res) => {
     fs.rename(__dirname + '/var/data/' + req.query.oldname, __dirname + '/var/data/' + req.query.newname, function(err) {
         if (err) {
