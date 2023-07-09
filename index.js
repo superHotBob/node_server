@@ -64,7 +64,7 @@ app.get('/locked', login, async (req, res) => {
 app.get('/deletereview', login, async (req, res) => {
     const result = await sql`
         update orders 
-        set review = ''
+        set review = ' '
         where id = ${req.query.id}
     `;
     res.send(result)
@@ -72,14 +72,14 @@ app.get('/deletereview', login, async (req, res) => {
 app.get('/reviews', login, async (req, res) => {
     const result = await sql`
         select
-        date_order,
-        review,
-        stars,
-        client_name,
-        client,
-        id
+            date_order,
+            review,
+            stars,
+            client_name,
+            client,
+            id
         from orders
-        where master = ${req.query.name} and review is not ''
+        where master = ${req.query.name} and review !=  ' '
     `;
     res.send(result)
 })
