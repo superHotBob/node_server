@@ -79,7 +79,7 @@ app.get('/reviews', login, async (req, res) => {
         client,
         id
         from orders
-        where master = ${req.query.name} and review is not null
+        where master = ${req.query.name} and review is not ''
     `;
     res.send(result)
 })
