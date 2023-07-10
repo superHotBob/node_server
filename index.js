@@ -30,11 +30,13 @@ const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 const sql = postgres(URL, { ssl: 'require' });
 
 app.use(cors({ origin: '*' }));
+app.use(express.static('public'));
+
 app.get('/var/data/*', (req, res) => {
     let pat = __dirname + req.path   
     res.sendFile(pat)
 })
-app.use(express.static('public'));
+
 
 app.get('/find_master', login, async (req, res) => {
     const result = await sql`
@@ -69,6 +71,7 @@ app.get('/deletereview', login, async (req, res) => {
     `;
     res.send(result)
 })
+
 app.get('/reviews', login, async (req, res) => {
     const result = await sql`
         select
@@ -206,23 +209,7 @@ app.get('/find_client', login, async (req, res) => {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
 })
-// app.get('/orders',login, async (req,res)=>{
-//     const result = await sql`
-//         select 
-//            master,
-//             client,
-//             price,
-//             date_create ,
-//             review,
-//             id          
-//         from orders
-//     `;    
-//     if(result) {
-//         res.send(result)
-//     } else {
-//         res.send(JSON.stringify({'message': 'error'}))
-//     }
-// })
+
 app.get('/message', login, async (req, res) => {
     const result = await sql`
     select * from (
@@ -307,9 +294,11 @@ app.get('/rename_master_dir', (req, res) => {
           console.log(err)
         } else {
           console.log("Successfully renamed the directory.")
+          res.send('Successfully renamed the directory.')
         }
     })
 })
+
 app.post('/answer_message', login, async (req, res) => {
     let dt = Date.now()
     const result = await sql`
