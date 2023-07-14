@@ -344,7 +344,7 @@ app.get('/getsertificats', (req, res) => {
 app.get('/getlists', (req, res) => {
     let lists = []
     fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
-        file.includes('list') && file.includes('jpg') ? lists.push(file) : null;
+        file.includes('jpg') ? lists.push(file) : null;
     });
     res.send(lists)
 })
@@ -459,11 +459,7 @@ app.post('/enter', (req, res) => {
     }
 })
 
-// async function getMetadata(req) {
-//     console.log(req.file)
-//     // const metadata = await sharp(req.file).metadata();
-//     // console.log(metadata);
-//   }
+
 const storageConfig = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, `var/data/${req.query.name}`);
