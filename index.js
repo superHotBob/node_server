@@ -344,7 +344,7 @@ app.get('/getsertificats', (req, res) => {
 app.get('/getlists', (req, res) => {
     let lists = []
     fs.readdirSync(__dirname + '/var/data/' + req.query.dir).forEach(file => {
-        file.includes('jpg') ? lists.push(file) : null;
+        file.includes('jpg') && !file.includes('main') && !file.includes('sertificat') ? lists.push(file) : null;
     });
     res.send(lists)
 })
