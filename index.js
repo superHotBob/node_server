@@ -209,7 +209,23 @@ app.get('/find_client', login, async (req, res) => {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
 })
-
+app.get('/find_all_images', login, async (req, res) => {   
+    if(req.query.service === 'все') {
+        const result = await sql`
+            select *          
+            from images           
+        `;
+    res.send(result)
+    } else {
+        const result = await sql`
+            select *          
+            from images 
+            where service = ${req.query.service}          
+        `;
+        res.send(result)
+    }   
+   
+})
 app.get('/message', login, async (req, res) => {
     const result = await sql`
     select * from (
@@ -291,7 +307,7 @@ app.get('/createclientfolder', (req, res) => {
 app.get('/rename_master_dir', (req, res) => {
     fs.rename(__dirname + '/var/data/' + req.query.oldname, __dirname + '/var/data/' + req.query.newname, function(err) {
         if (err) {
-          console.log(err)
+          console.log('Ошибка переименования директории')
         } else {
           console.log("Successfully renamed the directory.")
           res.send('Successfully renamed the directory.')
