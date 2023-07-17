@@ -255,6 +255,21 @@ app.get('/chat', login, async (req, res) => {
     }
 })
 
+app.get('/delete_image', login, async (req,res) => {
+    const delete_image = await sql`
+        delete from images
+        where id= ${req.query.id}
+    `
+    fs.unlink(__dirname + `/var/data/${req.query.nikname}/${req.query.id} + '.jpg'`, (err)=>{
+        if (err) {
+            throw err;
+        }
+    
+        console.log("Delete File successfully.");
+        res.send("Delete successfully")
+    })
+})
+
 app.get('/deletemaster', login, async (req, res) => {
     const delete_master = await sql`
         delete from users
