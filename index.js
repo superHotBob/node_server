@@ -260,7 +260,7 @@ app.get('/delete_image', login, async (req,res) => {
         delete from images
         where id= ${req.query.id}
     `
-    fs.unlink(__dirname + `/var/data/${req.query.nikname}/${req.query.id} + '.jpg'`, (err)=>{
+    fs.unlink(__dirname + `/var/data/${req.query.nikname}/${req.query.id}` + '.jpg', (err)=>{
         if (err) {
             throw err;
         }
