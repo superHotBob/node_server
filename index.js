@@ -268,13 +268,16 @@ app.get('/delete_image', login, async (req,res) => {
 })
 
 app.get('/deletemaster', login, async (req, res) => {
-    fs.rmdir(__dirname + `/var/data/${req.query.nikname}`, { recursive: true }, err => {
-        if (err) {
-          throw err
-        }      
-        console.log(`${dir} is deleted!`)
-       
-    })
+   
+    if (fs.existsSync(__dirname + `/var/data/${req.query.nikname}`)) {
+        fs.rmdir(__dirname + `/var/data/${req.query.nikname}`, { recursive: true }, err => {
+            if (err) {
+              throw err
+            }      
+            console.log(`${dir} is deleted!`)
+           
+        })
+    } 
 
     if(req.query.status === 'client'){
         await sql`
