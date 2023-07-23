@@ -230,8 +230,7 @@ app.get('/message', login, async (req, res) => {
     const result = await sql`
     select * from (
         select distinct on ( chat ) *         
-        from  adminchat       
-        where sendler_nikname  !=  'администратор'        
+        from  adminchat             
         order by chat, ms_date desc
       ) chat
     `;
@@ -269,16 +268,30 @@ app.get('/delete_image', login, async (req,res) => {
 })
 
 app.get('/deletemaster', login, async (req, res) => {
-    const delete_master = await sql`
+   fs.rmSync(__dirname + `/var/data/${req.query.nikname}`, { recursive: true });
+
+    if(req.query.status === 'client'){
+        await sql`
+            delete from clients
+            where nikname = ${req.query.nikname}
+        `;
+        await sql`
+            delete from adminchat
+            where sendler_nikname = ${req.query.nikname} or recipient_nikname = ${req.query.nikname}
+        `;
+        res.send("Delete ok")
+        return;
+    }
+    await sql`
         delete from users
         where nikname = ${req.query.nikname}
     `;
-    console.log('delete_master')
-    const delete_client = await sql`
-    delete from clients
-    where nikname = ${req.query.nikname}
+    
+    await sql`
+        delete from clients
+        where nikname = ${req.query.nikname}
     `;
-    console.log('delete_client')
+    
     const delete_services = await sql`
     delete from services
     where nikname = ${req.query.nikname}
@@ -287,8 +300,8 @@ app.get('/deletemaster', login, async (req, res) => {
     delete from schedule
     where nikname = ${req.query.nikname}
     `
-    fs.rmSync(__dirname + `/var/data/${req.query.nikname}`, { recursive: true });
-    console.log('delete_folder')
+   
+   
     res.send("Delete ok")
 })
 
