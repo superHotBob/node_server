@@ -306,9 +306,14 @@ app.get('/deletemaster', login, async (req, res) => {
 })
 
 app.get('/deleteclientfolder', (req, res) => {
-    fs.rmSync(__dirname + `/var/data/${req.query.nikname}`, { recursive: true });
-    console.log('delete client folder')
-    res.send("Delete ok")
+    fs.rmdir(__dirname + `/var/data/${req.query.nikname}`, { recursive: true }, err => {
+        if (err) {
+          throw err
+        }      
+        console.log(`${dir} is deleted!`)
+        res.send(`Folder ${req.query.nikname}  deleted ok`)
+    })
+   
 })
 
 app.get('/createclientfolder', (req, res) => {
