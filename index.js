@@ -72,6 +72,15 @@ app.get('/deletereview', login, async (req, res) => {
     res.send(result)
 })
 
+app.get('/get_entres', login, async (req, res) => {
+    const result = await sql`
+        select *            
+        from history
+        where phone = ${req.query.phone} 
+    `;
+    res.send(result)
+})
+
 app.get('/reviews', login, async (req, res) => {
     const result = await sql`
         select
