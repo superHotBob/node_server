@@ -90,6 +90,8 @@ app.get('/reviews', login, async (req, res) => {
             stars,
             client_name,
             client,
+            master,
+            master_name,
             id
         from orders
         where master = ${req.query.name} or client = ${req.query.name} and review !=  ' '
