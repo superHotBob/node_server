@@ -82,6 +82,17 @@ app.get('/get_entres', login, async (req, res) => {
     res.send(result)
 })
 
+app.get("/endedorders", login, async(req,res) => {
+    const  month = (new Date()).getMonth() + 1
+    const result = await sql`
+    select
+       COUNT(*)
+    from orders
+    where order_month < ${month}
+    `;
+res.send(result)
+})
+
 app.get('/reviews', login, async (req, res) => {
     const result = await sql`
         select
@@ -94,7 +105,7 @@ app.get('/reviews', login, async (req, res) => {
             master_name,
             id
         from orders
-        where master = ${req.query.name} or client = ${req.query.name} and review !=  ' '
+        where (master = ${req.query.name} or client = ${req.query.name}) and review <> '0'
     `;
     res.send(result)
 })
@@ -160,9 +171,12 @@ app.get('/countclients', login, async (req, res) => {
 })
 
 app.get('/countorders', login, async (req, res) => {
+    const  month = (new Date()).getMonth() + 1
     const result = await sql`
         select count(*)
-        from orders    `
+        from orders 
+        where order_month  >= ${month}   
+     `
     res.send(result[0].count)
 })
 
