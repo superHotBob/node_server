@@ -200,7 +200,7 @@ app.get('/clients', login, async (req, res) => {
             rating
         from clients
         ORDER BY 
-            phone	
+            registration	
         limit ${req.query.limit} offset ${req.query.offset}
     `;
     if (result) {
