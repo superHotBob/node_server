@@ -33,7 +33,7 @@ app.use(cors({ origin: '*' }));
 app.use(express.static('public'));
 
 app.get('/var/data/*', (req, res) => {
-    let pat = __dirname + req.path   
+    let pat = __dirname + req.path
     res.sendFile(pat)
 })
 
@@ -82,15 +82,15 @@ app.get('/get_entres', login, async (req, res) => {
     res.send(result)
 })
 
-app.get("/endedorders", login, async(req,res) => {
-    const  month = (new Date()).getMonth() + 1
+app.get("/endedorders", login, async (req, res) => {
+    const month = (new Date()).getMonth() + 1
     const result = await sql`
     select
        COUNT(*)
     from orders
     where order_month < ${month}
     `;
-res.send(result)
+    res.send(result)
 })
 
 app.get('/reviews', login, async (req, res) => {
@@ -116,9 +116,9 @@ app.get('/blocked', login, async (req, res) => {
         set blocked = CURRENT_DATE
         where phone = ${req.query.phone}
     `;
-   
+
     if (update_clients.length === 0) {
-        res.status(500).send({error: 'Error'})
+        res.status(500).send({ error: 'Error' })
     } else {
         const update_users = await sql`
         update users 
@@ -126,7 +126,7 @@ app.get('/blocked', login, async (req, res) => {
         where phone = ${req.query.phone}
         `;
         if (update_users.length === 0) {
-            res.status(500).send({error: 'Error'})
+            res.status(500).send({ error: 'Error' })
         }
         res.send('OK')
     }
@@ -138,7 +138,7 @@ app.get('/changerating', login, async (req, res) => {
         set rating = ${req.query.rating}
         where nikname = ${req.query.name}
     `;
-   res.send('Ok')   
+    res.send('Ok')
 })
 
 app.get('/unblocked', login, async (req, res) => {
@@ -147,9 +147,9 @@ app.get('/unblocked', login, async (req, res) => {
         set blocked = '0'
         where phone = ${req.query.phone}
     `;
-   
+
     if (update_clients.length === 0) {
-        res.status(500).send({error: 'Error'})
+        res.status(500).send({ error: 'Error' })
     } else {
         const update_users = await sql`
         update users 
@@ -157,7 +157,7 @@ app.get('/unblocked', login, async (req, res) => {
         where phone = ${req.query.phone}
         `;
         if (update_users.length === 0) {
-            res.status(500).send({error: 'Error'})
+            res.status(500).send({ error: 'Error' })
         }
         res.send('OK')
     }
@@ -171,7 +171,7 @@ app.get('/countclients', login, async (req, res) => {
 })
 
 app.get('/countorders', login, async (req, res) => {
-    const  month = (new Date()).getMonth() + 1
+    const month = (new Date()).getMonth() + 1
     const result = await sql`
         select count(*)
         from orders 
@@ -235,13 +235,13 @@ app.get('/find_client', login, async (req, res) => {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
 })
-app.get('/find_all_images', login, async (req, res) => {   
-    if(req.query.service === 'все') {
+app.get('/find_all_images', login, async (req, res) => {
+    if (req.query.service === 'все') {
         const result = await sql`
             select *          
             from images           
         `;
-    res.send(result)
+        res.send(result)
     } else {
         const result = await sql`
             select *          
@@ -249,8 +249,8 @@ app.get('/find_all_images', login, async (req, res) => {
             where service = ${req.query.service}          
         `;
         res.send(result)
-    }   
-   
+    }
+
 })
 app.get('/message', login, async (req, res) => {
     const result = await sql`
@@ -280,32 +280,32 @@ app.get('/chat', login, async (req, res) => {
     }
 })
 
-app.get('/delete_image', login, async (req,res) => {
+app.get('/delete_image', login, async (req, res) => {
     const delete_image = await sql`
         delete from images
         where id= ${req.query.id}
     `
-    fs.unlink(__dirname + `/var/data/${req.query.nikname}/${req.query.id}` + '.jpg', (err)=>{
+    fs.unlink(__dirname + `/var/data/${req.query.nikname}/${req.query.id}` + '.jpg', (err) => {
         if (err) {
             throw err;
-        }    
+        }
         res.send("Delete successfully")
     })
 })
 
 app.get('/deletemaster', login, async (req, res) => {
-   
+
     if (fs.existsSync(__dirname + `/var/data/${req.query.nikname}`)) {
         fs.rmdir(__dirname + `/var/data/${req.query.nikname}`, { recursive: true }, err => {
             if (err) {
-              throw err
-            }      
+                throw err
+            }
             console.log(`${dir} is deleted!`)
-           
-        })
-    } 
 
-    if(req.query.status === 'client'){
+        })
+    }
+
+    if (req.query.status === 'client') {
         await sql`
             delete from clients
             where nikname = ${req.query.nikname}
@@ -314,41 +314,58 @@ app.get('/deletemaster', login, async (req, res) => {
             delete from adminchat
             where sendler_nikname = ${req.query.nikname} or recipient_nikname = ${req.query.nikname}
         `;
-        res.send("Delete ok")
+        await sql`
+            delete from chat
+            where sendler_nikname = ${req.query.nikname} or recipient_nikname = ${req.query.nikname}
+        `;
+        res.send("Профиль удалён")
         return;
+    } else {
+
+        await sql`
+            delete from users
+            where nikname = ${req.query.nikname}
+        `;
+
+        await sql`
+            delete from clients
+            where nikname = ${req.query.nikname}
+        `;
+
+        await sql`
+            delete from services
+            where nikname = ${req.query.nikname}
+        `;
+        await sql`
+            delete from schedule
+            where nikname = ${req.query.nikname}
+        `;
+        await sql`
+            delete from  images
+            where nikname = ${req.query.nikname}
+        `;
+        await sql`
+            delete from adminchat
+            where sendler_nikname = ${req.query.nikname} or recipient_nikname = ${req.query.nikname}
+        `;
+        await sql`
+            delete from chat
+            where sendler_nikname = ${req.query.nikname} or recipient_nikname = ${req.query.nikname}
+        `;
+
+        res.send("ПРфиль удален")
     }
-    await sql`
-        delete from users
-        where nikname = ${req.query.nikname}
-    `;
-    
-    await sql`
-        delete from clients
-        where nikname = ${req.query.nikname}
-    `;
-    
-    const delete_services = await sql`
-    delete from services
-    where nikname = ${req.query.nikname}
-    `
-    const delete_schedule = await sql`
-    delete from schedule
-    where nikname = ${req.query.nikname}
-    `
-   
-   
-    res.send("Delete ok")
 })
 
 app.get('/deleteclientfolder', (req, res) => {
     fs.rmdir(__dirname + `/var/data/${req.query.nikname}`, { recursive: true }, err => {
         if (err) {
-          throw err
-        }      
+            throw err
+        }
         console.log(`${dir} is deleted!`)
         res.send(`Folder ${req.query.nikname}  deleted ok`)
     })
-   
+
 })
 
 app.get('/createclientfolder', (req, res) => {
@@ -371,12 +388,12 @@ app.get('/createclientfolder', (req, res) => {
 })
 
 app.get('/rename_master_dir', (req, res) => {
-    fs.rename(__dirname + '/var/data/' + req.query.oldname, __dirname + '/var/data/' + req.query.newname, function(err) {
+    fs.rename(__dirname + '/var/data/' + req.query.oldname, __dirname + '/var/data/' + req.query.newname, function (err) {
         if (err) {
-          console.log('Ошибка переименования директории')
+            console.log('Ошибка переименования директории')
         } else {
-          console.log("Successfully renamed the directory.")
-          res.send('Successfully renamed the directory.')
+            console.log("Successfully renamed the directory.")
+            res.send('Successfully renamed the directory.')
         }
     })
 })
@@ -413,7 +430,7 @@ app.post('/message', login, async (req, res) => {
       'false'
     )  
     `
-    res.status(200).send({text:"Сообщение добавлено"})
+    res.status(200).send({ text: "Сообщение добавлено" })
 })
 
 app.get('/getsertificats', (req, res) => {
