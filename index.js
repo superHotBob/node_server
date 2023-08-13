@@ -281,7 +281,7 @@ app.get('/chat', login, async (req, res) => {
 })
 
 app.get('/delete_image', login, async (req, res) => {
-    const delete_image = await sql`
+    await sql`
         delete from images
         where id= ${req.query.id}
     `
@@ -300,7 +300,7 @@ app.get('/deletemaster', login, async (req, res) => {
             if (err) {
                 throw err
             }
-            console.log(`${dir} is deleted!`)
+            console.log('Каталог удалён')
 
         })
     }
