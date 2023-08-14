@@ -593,10 +593,10 @@ app.get('/filesformoderate', (req, res) => {
 })
 
 app.use(express.static(path.join(__dirname, '/public')));
-// app.use((req, res, next) => {
-//     res.status(404).send(
-//         "<h1 style='text-align: center;margin: 200px auto' >Page not found on the server</h1>")
-// });
+app.use((req, res, next) => {
+    res.status(404).send(
+        "<h1 style='text-align: center;margin: 200px auto' >Page not found on the server</h1>")
+});
 app.listen(port, () => {
     console.log(`Now listening on port ${port}`);
 });
