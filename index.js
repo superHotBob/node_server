@@ -550,7 +550,7 @@ function login(req, res, next) {
     }
 
 }
-app.use('/*', express.static(__dirname + '/build'));
+app.use('/', express.static(__dirname + '/build'));
 
 app.post('/enter', (req, res) => {
     if (req.body.name === USER && req.body.password === PASSWORD) {
