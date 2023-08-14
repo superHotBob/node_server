@@ -115,6 +115,7 @@ app.get('/blocked', login, async (req, res) => {
         update clients 
         set blocked = CURRENT_DATE
         where phone = ${req.query.phone}
+        return *
     `;
 
     if (update_clients.length === 0) {
@@ -124,6 +125,7 @@ app.get('/blocked', login, async (req, res) => {
         update users 
         set blocked = CURRENT_DATE
         where phone = ${req.query.phone}
+        return *
         `;
         if (update_users.length === 0) {
             res.status(500).send({ error: 'Error' })
@@ -548,7 +550,7 @@ function login(req, res, next) {
     }
 
 }
-app.use('/', express.static(__dirname + '/build'));
+app.use('/*', express.static(__dirname + '/build'));
 
 app.post('/enter', (req, res) => {
     if (req.body.name === USER && req.body.password === PASSWORD) {
@@ -591,10 +593,10 @@ app.get('/filesformoderate', (req, res) => {
 })
 
 app.use(express.static(path.join(__dirname, '/public')));
-app.use((req, res, next) => {
-    res.status(404).send(
-        "<h1 style='text-align: center;margin: 200px auto' >Page not found on the server</h1>")
-});
+// app.use((req, res, next) => {
+//     res.status(404).send(
+//         "<h1 style='text-align: center;margin: 200px auto' >Page not found on the server</h1>")
+// });
 app.listen(port, () => {
     console.log(`Now listening on port ${port}`);
 });
