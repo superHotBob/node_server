@@ -355,7 +355,7 @@ app.get('/deletemaster', login, async (req, res) => {
             where sendler_nikname = ${req.query.nikname} or recipient_nikname = ${req.query.nikname}
         `;
 
-        res.send("ПРфиль удален")
+        res.send("Профиль удален")
     }
 })
 
@@ -364,7 +364,7 @@ app.get('/deleteclientfolder', (req, res) => {
         if (err) {
             throw err
         }
-        console.log(`${dir} is deleted!`)
+        console.log('Папка клиента удалена')
         res.send(`Folder ${req.query.nikname}  deleted ok`)
     })
 
