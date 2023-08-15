@@ -15,7 +15,7 @@ const bodyParser = require("body-parser");
 const rateLimit = require('express-rate-limit')
 const apiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minutes
-    max: 1, // Limit each IP to 3 requests per `window` (here, per 15 minutes)
+    max: 3, // Limit each IP to 3 requests per `window` (here, per 15 minutes)
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 })
@@ -269,10 +269,10 @@ app.get('/message', login, async (req, res) => {
     }
 })
 
-app.get('/chats', login, async (req, res) => {
+app.get('/admin_user_chat', login, async (req, res) => {
     const result = await sql`
     select * from  adminchat       
-        where sendler_nikname  =  ${req.query.nikname}   or  recipient_nikname =   ${req.query.nikname} 
+        where chat  =  +${req.query.chat} 
        
     `;
     if (result) {
