@@ -185,8 +185,19 @@ app.get('/countorders', login, async (req, res) => {
 app.get('/countmasters', login, async (req, res) => {
     const result = await sql`
         select count(*)
-        from users `
+        from users 
+    `;
     res.send(result[0].count)
+})
+
+app.get('/get_nikname', login, async (req, res) => {
+    const result = await sql`
+        select nikname 
+        from clients 
+        where phone = ${req.query.phone} 
+    `;
+    res.send(result[0].nikname)
+   
 })
 
 app.get('/clients', login, async (req, res) => {
@@ -256,7 +267,7 @@ app.get('/find_all_images', login, async (req, res) => {
 })
 app.get('/message', login, async (req, res) => {
     const result = await sql`
-    select * from (
+    select chat, recipient, ms_date, sendler, recipient_nikname, sendler_nikname from (
         select distinct on ( chat ) *         
         from  adminchat             
         order by chat, ms_date desc
@@ -271,9 +282,8 @@ app.get('/message', login, async (req, res) => {
 
 app.get('/admin_user_chat', login, async (req, res) => {
     const result = await sql`
-    select * from  adminchat       
-        where chat  =  +${req.query.chat} 
-       
+        select * from  adminchat       
+        where chat  =  +${req.query.chat}       
     `;
     if (result) {
         res.send(result)
@@ -286,7 +296,7 @@ app.get('/delete_image', login, async (req, res) => {
     await sql`
         delete from images
         where id= ${req.query.id}
-    `
+    `;
     fs.unlink(__dirname + `/var/data/${req.query.nikname}/${req.query.id}` + '.jpg', (err) => {
         if (err) {
             throw err;
@@ -484,8 +494,7 @@ app.get('/readtext', (req, res) => {
         res.send('')
     }
 })
-app.post('/createtag', (req, res) => {
-    console.log(req.query.name, req.body)
+app.post('/createtag', (req, res) => {  
     let new_fle = (req.body.name).replace('jpg', 'txt')
     fs.writeFile(__dirname + '/var/data/' + req.query.name + '/' + new_fle, req.body.text, function (err) {
         if (err) throw err;
@@ -503,14 +512,13 @@ app.post('/call', apiLimiter, (req, res) => {
     //         console.log(responce.code)       
     //         res.end("OK")   
     //     })
-    calls[req.body.tel] = 1234
-    console.log(calls)
+    calls[req.body.tel] = 1234   
     res.end("OK")
 
 })
 
 app.post('/code', (req, res) => {
-    console.log(calls[req.body.tel] === req.body.number)
+  
     if (calls[req.body.tel] === req.body.number) {
         delete calls === req.body.tel
         res.status(200).send("OK")
