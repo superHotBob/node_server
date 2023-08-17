@@ -142,7 +142,14 @@ app.get('/changerating', login, async (req, res) => {
     `;
     res.send('Ok')
 })
-
+app.get('/setreadmessage', login, async (req, res) => {
+    await sql`
+        update adminchat 
+        set read = 't'
+        where chat = ${req.query.chat} and ms_date = ${req.query.date}
+    `;
+    res.send('OK')
+})
 app.get('/unblocked', login, async (req, res) => {
     const update_clients = await sql`
         update clients 
@@ -267,7 +274,7 @@ app.get('/find_all_images', login, async (req, res) => {
 })
 app.get('/message', login, async (req, res) => {
     const result = await sql`
-    select chat, recipient, ms_date, sendler, recipient_nikname, sendler_nikname from (
+    select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
         select distinct on ( chat ) *         
         from  adminchat             
         order by chat, ms_date desc
@@ -280,7 +287,7 @@ app.get('/message', login, async (req, res) => {
     }
 })
 
-app.get('/admin_user_chat', login, async (req, res) => {
+app.get('/admin_user_dialog', login, async (req, res) => {
     const result = await sql`
         select * from  adminchat       
         where chat  =  +${req.query.chat}       
@@ -412,17 +419,18 @@ app.get('/rename_master_dir', (req, res) => {
 
 app.post('/answer_message', login, async (req, res) => {
     let dt = Date.now()
-    const result = await sql`
-    insert into adminchat (recipient,recipient_nikname,sendler,sendler_nikname,ms_text,ms_date,chat) 
-    values (
-      ${req.body.recipient},
-      ${req.body.recipient_nikname},
-      'администратор',
-      'администратор',  
-      ${req.body.ms_text},
-      ${dt},
-      ${req.body.chat}
-    )  
+    await sql`
+        insert into adminchat (recipient,recipient_nikname,sendler,sendler_nikname,ms_text,ms_date,chat,read) 
+        values (
+        ${req.body.recipient},
+        ${req.body.recipient_nikname},
+        'администратор',
+        'администратор',  
+        ${req.body.ms_text},
+        ${dt},
+        ${req.body.chat},
+        'f'
+        )  
     `
     res.send("Сообщение изменено")
 })
