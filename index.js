@@ -111,26 +111,63 @@ app.get('/reviews', login, async (req, res) => {
 })
 
 app.get('/blocked', login, async (req, res) => {
-    const update_clients = await sql`
+    const user = await sql`
         update clients 
         set blocked = CURRENT_DATE
-        where phone = ${req.query.phone}
-        return *
+        where phone = ${req.query.phone}  
+        returning nikname , status    
     `;
+    const nikname = user[0].nikname
+    const status = user[0].status  
 
-    if (update_clients.length === 0) {
-        res.status(500).send({ error: 'Error' })
-    } else {
-        const update_users = await sql`
-        update users 
-        set blocked = CURRENT_DATE
-        where phone = ${req.query.phone}
-         return *
+    if (fs.existsSync(__dirname + `/var/data/${nikname}`)) {
+        fs.rmdir(__dirname + `/var/data/${nikname}`, { recursive: true }, err => {
+            if (err) {
+                throw err
+            }
+            console.log('Каталог удалён')
+
+        })
+    }
+
+    if (status === 'client') {       
+        await sql`
+            delete from adminchat
+            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
         `;
-        if (update_users.length === 0) {
-            res.status(500).send({ error: 'Error' })
-        }
-        res.send('OK')
+        await sql`
+            delete from chat
+            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
+        `;
+        res.send("Профиль удалён")
+        
+    } else {
+        await sql`
+            delete from users
+            where nikname = ${nikname}
+        `;
+        await sql`
+            delete from services
+            where nikname = ${nikname}
+        `;
+        await sql`
+            delete from schedule
+            where nikname = ${nikname}
+        `;
+        await sql`
+            delete from  images
+            where nikname = ${nikname}
+        `;
+        await sql`
+            delete from adminchat
+            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
+        `;
+        await sql`
+            delete from chat
+            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
+        `;
+
+        res.send("Профиль удален")
     }
 })
 
@@ -150,32 +187,20 @@ app.get('/setreadmessage', login, async (req, res) => {
     `;
     res.send('OK')
 })
-app.get('/unblocked', login, async (req, res) => {
-    const update_clients = await sql`
-        update clients 
-        set blocked = '0'
+app.get('/deleteblocked', login, async (req, res) => {
+    await sql`
+        delete from clients         
         where phone = ${req.query.phone}
     `;
-
-    if (update_clients.length === 0) {
-        res.status(500).send({ error: 'Error' })
-    } else {
-        const update_users = await sql`
-        update users 
-        set blocked = '0'
-        where phone = ${req.query.phone}
-        `;
-        if (update_users.length === 0) {
-            res.status(500).send({ error: 'Error' })
-        }
-        res.send('OK')
-    }
+    res.send('Заблокированый пользователь удален')
 })
 
 app.get('/countclients', login, async (req, res) => {
-    const result = await sql`
+    await sql`
         select count(*)
-        from clients    `
+        from clients
+        where status = 'client'
+    `
     res.send(result[0].count)
 })
 
@@ -312,7 +337,7 @@ app.get('/delete_image', login, async (req, res) => {
     })
 })
 
-app.get('/deletemaster', login, async (req, res) => {
+app.get('/deleteuser', login, async (req, res) => {
 
     if (fs.existsSync(__dirname + `/var/data/${req.query.nikname}`)) {
         fs.rmdir(__dirname + `/var/data/${req.query.nikname}`, { recursive: true }, err => {
