@@ -274,7 +274,7 @@ app.get('/find_client', login, async (req, res) => {
         where 
            ( phone::text like ${phone + '%'}
             or nikname like ${nikname + '%'})
-            and status ='0'
+            and blocked = '0'
            
     `;
     if (result) {
