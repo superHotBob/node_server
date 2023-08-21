@@ -196,12 +196,13 @@ app.get('/deleteblocked', login, async (req, res) => {
 })
 
 app.get('/countclients', login, async (req, res) => {
-    await sql`
+    let clients = await sql`
         select count(*)
         from clients
         where status = 'client'
     `
-    res.send(result[0].count)
+    res.send(clients[0].count)
+    
 })
 
 app.get('/countorders', login, async (req, res) => {
@@ -244,6 +245,7 @@ app.get('/clients', login, async (req, res) => {
             registration,
             rating
         from clients
+        where blocked = '0'
         ORDER BY 
             registration	
         limit ${req.query.limit} offset ${req.query.offset}
@@ -270,8 +272,9 @@ app.get('/find_client', login, async (req, res) => {
             rating
         from clients       
         where 
-            phone::text like ${phone + '%'}
-            or nikname like ${nikname + '%'}
+           ( phone::text like ${phone + '%'}
+            or nikname like ${nikname + '%'})
+            and status ='0'
            
     `;
     if (result) {
