@@ -304,12 +304,25 @@ app.get('/message', login, async (req, res) => {
     const result = await sql`
     select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
         select distinct on ( chat ) *         
-        from  adminchat             
+        from  adminchat  
+        where (recipient != 'master' or recipient !='client' or recipient != 'all')  and (recipient = 'администратор' and read = 'true')  or   (sendler = 'администратор' and read = 'false')       
         order by chat, ms_date desc
       ) chat
+      order by  ms_date desc
     `;
+    const result_read = await sql`
+    select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
+        select distinct on ( chat ) *         
+        from  adminchat  
+        where recipient = 'администратор' and read != 'true'           
+        order by chat, ms_date desc
+      ) chat
+      order by  ms_date desc
+    `;
+   
+    
     if (result) {
-        res.send(result)
+        res.send(result_read.concat(result))
     } else {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
