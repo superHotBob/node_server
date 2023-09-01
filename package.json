@@ -4,8 +4,9 @@
   "description": "test server",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "develope" : "nodemon index.js"
   },
   "author": "i",
   "license": "ISC",

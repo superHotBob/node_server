@@ -61,6 +61,8 @@ app.get('/locked', login, async (req, res) => {
     res.send(result)
 })
 
+
+
 app.get('/deletereview', login, async (req, res) => {
     const result = await sql`
         update orders 
