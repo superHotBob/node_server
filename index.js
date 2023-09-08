@@ -10,7 +10,8 @@ const cors = require('cors');
 const postgres = require('postgres');
 const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
-const rateLimit = require('express-rate-limit')
+const rateLimit = require('express-rate-limit');
+const { Client } = require('pg');
 const apiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minutes
     max: 3, // Limit each IP to 3 requests per `window` (here, per 15 minutes)
@@ -26,6 +27,18 @@ const { PGUSER, PGPASSWORD, PASSWORD, USER, USERCALL, PASSWORDCALL } = process.e
 const URL = `postgres://${PGUSER}:${PGPASSWORD}@ep-yellow-mountain-679652.eu-central-1.aws.neon.tech/neondb?sslmode=require&options=project%3Dep-yellow-mountain-679652`;
 const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 const sql = postgres(URL, { ssl: 'require' });
+
+const clientdb = new Client({
+    user: 'client',
+    host: '5.35.5.23',
+    database: 'postgres',
+    password: 'client123',
+    port: 5432,
+})
+clientdb.connect(function (err) {
+    if (err) throw err;
+    console.log("Connected!");
+});
 
 app.use(cors({ origin: '*' }));
 app.use(express.static('public'));
@@ -73,14 +86,16 @@ app.get('/deletereview', login, async (req, res) => {
     res.send(result)
 })
 
-app.get('/get_entres', login, async (req, res) => {
-    const result = await sql`
-        select *            
-        from history
-        where phone = ${req.query.phone} 
-    `;
-    res.send(result)
+app.get('/get_entres', login, async (req, res) => {  
+    const query = `SELECT * 
+    FROM "history"
+    WHERE "phone" = $1`;
+    const { rows } = await clientdb.query(query, [req.query.phone]);   
+    res.send(rows)
 })
+
+
+
 
 app.get("/endedorders", login, async (req, res) => {
     const month = (new Date()).getMonth() + 1
@@ -118,7 +133,7 @@ app.get('/blocked', login, async (req, res) => {
         returning nikname , status    
     `;
     const nikname = user[0].nikname
-    const status = user[0].status  
+    const status = user[0].status
 
     if (fs.existsSync(__dirname + `/var/data/${nikname}`)) {
         fs.rmdir(__dirname + `/var/data/${nikname}`, { recursive: true }, err => {
@@ -130,7 +145,7 @@ app.get('/blocked', login, async (req, res) => {
         })
     }
 
-    if (status === 'client') {       
+    if (status === 'client') {
         await sql`
             delete from adminchat
             where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
@@ -140,7 +155,7 @@ app.get('/blocked', login, async (req, res) => {
             where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
         `;
         res.send("Профиль удалён")
-        
+
     } else {
         await sql`
             delete from users
@@ -202,7 +217,7 @@ app.get('/countclients', login, async (req, res) => {
         where status = 'client'
     `
     res.send(clients[0].count)
-    
+
 })
 
 app.get('/countorders', login, async (req, res) => {
@@ -230,7 +245,7 @@ app.get('/get_nikname', login, async (req, res) => {
         where phone = ${req.query.phone} 
     `;
     res.send(result[0].nikname)
-   
+
 })
 
 app.get('/clients', login, async (req, res) => {
@@ -319,8 +334,8 @@ app.get('/message', login, async (req, res) => {
       ) chat
       order by  ms_date desc
     `;
-   
-    
+
+
     if (result) {
         res.send(result_read.concat(result))
     } else {
@@ -354,9 +369,10 @@ app.get('/delete_image', login, async (req, res) => {
 })
 
 app.get('/deleteuser', login, async (req, res) => {
+    const nikname = req.query.nikname;
 
-    if (fs.existsSync(__dirname + `/var/data/${req.query.nikname}`)) {
-        fs.rmdir(__dirname + `/var/data/${req.query.nikname}`, { recursive: true }, err => {
+    if (fs.existsSync(__dirname + `/var/data/${nikname}`)) {
+        fs.rmdir(__dirname + `/var/data/${nikname}`, { recursive: true }, err => {
             if (err) {
                 throw err
             }
@@ -365,52 +381,63 @@ app.get('/deleteuser', login, async (req, res) => {
         })
     }
 
+
+
     if (req.query.status === 'client') {
+        console.log(nikname)
+
+        await clientdb.query(`DELETE from "clients" WHERE "nikname" = $1`,[nikname]);
         await sql`
             delete from clients
-            where nikname = ${req.query.nikname}
+            where nikname = ${nikname}
         `;
+        await clientdb.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or recipient_nikname = $1`,[nikname]);
         await sql`
             delete from adminchat
-            where sendler_nikname = ${req.query.nikname} or recipient_nikname = ${req.query.nikname}
+            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
         `;
-        await sql`
-            delete from chat
-            where sendler_nikname = ${req.query.nikname} or recipient_nikname = ${req.query.nikname}
-        `;
+        await clientdb.query(`DELETE from "chat" WHERE "sendler_nikname" = $1 or recipient_nikname = $1`,[nikname]);
+        // await sql`
+        //     delete from chat
+        //     where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
+        // `;
         res.send("Профиль удалён")
         return;
     } else {
-
+        await clientdb.query(`DELETE from "users" WHERE "nikname" = $1`,[nikname]);
         await sql`
             delete from users
-            where nikname = ${req.query.nikname}
+            where nikname = ${nikname}
         `;
-
+        await clientdb.query(`DELETE from "clients" WHERE "nikname" = $1`,[nikname]);
         await sql`
             delete from clients
-            where nikname = ${req.query.nikname}
+            where nikname = ${nikname}
         `;
-
+        await clientdb.query(`DELETE from "services" WHERE "nikname" = $1`,[nikname]);
         await sql`
             delete from services
-            where nikname = ${req.query.nikname}
+            where nikname = ${nikname}
         `;
+        await clientdb.query(`DELETE from "schedule" WHERE "nikname" = $1`,[nikname]);
         await sql`
             delete from schedule
-            where nikname = ${req.query.nikname}
+            where nikname = ${nikname}
         `;
+        await clientdb.query(`DELETE from "images" WHERE "nikname" = $1`,[nikname]);
         await sql`
             delete from  images
-            where nikname = ${req.query.nikname}
+            where nikname = ${nikname}
         `;
+        await clientdb.query(`DELETE from "adminchat" WHERE "nikname" = $1`,[nikname]);
         await sql`
             delete from adminchat
-            where sendler_nikname = ${req.query.nikname} or recipient_nikname = ${req.query.nikname}
+            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
         `;
+        await clientdb.query(`DELETE from "chat" WHERE "nikname" = $1`,[nikname]);
         await sql`
             delete from chat
-            where sendler_nikname = ${req.query.nikname} or recipient_nikname = ${req.query.nikname}
+            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
         `;
 
         res.send("Профиль удален")
@@ -543,7 +570,7 @@ app.get('/readtext', (req, res) => {
         res.send('')
     }
 })
-app.post('/createtag', (req, res) => {  
+app.post('/createtag', (req, res) => {
     let new_fle = (req.body.name).replace('jpg', 'txt')
     fs.writeFile(__dirname + '/var/data/' + req.query.name + '/' + new_fle, req.body.text, function (err) {
         if (err) throw err;
@@ -561,13 +588,13 @@ app.post('/call', apiLimiter, (req, res) => {
     //         console.log(responce.code)       
     //         res.end("OK")   
     //     })
-    calls[req.body.tel] = 1234   
+    calls[req.body.tel] = 1234
     res.end("OK")
 
 })
 
 app.post('/code', (req, res) => {
-  
+
     if (calls[req.body.tel] === req.body.number) {
         delete calls === req.body.tel
         res.status(200).send("OK")
@@ -652,9 +679,9 @@ app.get('/filesformoderate', (req, res) => {
 app.use(express.static(path.join(__dirname, '/public')));
 app.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, 'build', 'index.html'));
-  });
+});
 // app.use((req, res, next) => {
-   
+
 //     res.status(404).send(
 //         "<h1 style='text-align: center;margin: 200px auto' >Page not found on the server</h1>")
 // });
