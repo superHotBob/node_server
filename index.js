@@ -368,9 +368,8 @@ app.get('/delete_image', login, async (req, res) => {
     })
 })
 
-app.get('/deleteuser', login, async (req, res) => {
+app.get('/deleteuser', async (req, res) => {
     const nikname = req.query.nikname;
-
     if (fs.existsSync(__dirname + `/var/data/${nikname}`)) {
         fs.rmdir(__dirname + `/var/data/${nikname}`, { recursive: true }, err => {
             if (err) {
@@ -382,20 +381,19 @@ app.get('/deleteuser', login, async (req, res) => {
     }
 
 
-
     if (req.query.status === 'client') {
         console.log(nikname)
 
         await clientdb.query(`DELETE from "clients" WHERE "nikname" = $1`,[nikname]);
-        await sql`
-            delete from clients
-            where nikname = ${nikname}
-        `;
+        // await sql`
+        //     delete from clients
+        //     where nikname = ${nikname}
+        // `;
         await clientdb.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or recipient_nikname = $1`,[nikname]);
-        await sql`
-            delete from adminchat
-            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
-        `;
+        // await sql`
+        //     delete from adminchat
+        //     where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
+        // `;
         await clientdb.query(`DELETE from "chat" WHERE "sendler_nikname" = $1 or recipient_nikname = $1`,[nikname]);
         // await sql`
         //     delete from chat
@@ -627,6 +625,7 @@ app.use('/var/data/*', (req, res) => {
 
 
 function login(req, res, next) {
+    console.log(JSON.stringify(req.headers.authorization))
     if (JSON.stringify(req.headers.authorization) === '"' + USER + '"') {
         next()
     } else {
