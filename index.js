@@ -453,23 +453,23 @@ app.get('/deleteclientfolder', (req, res) => {
 
 })
 
-app.get('/createclientfolder', (req, res) => {
-    fs.access(__dirname + `/var/data/${req.query.dir}`, (err) => {
-        if (err) {
-            fs.mkdirSync(__dirname + `/var/data/${req.query.dir}`);
-            fs.copyFile((__dirname + '/main.jpg'), (__dirname + `/var/data/${req.query.dir}/main.jpg`), (error) => {
+app.get('/createclientfolder', login, (req, res) => {
+    // fs.access(__dirname + `/var/data/${req.query.dir}`, (err) => {
+    //     if (err) {
+    //         fs.mkdirSync(__dirname + `/var/data/${req.query.dir}`);
+            fs.copyFile((__dirname + '/main.jpg'), (`/data/images/${req.query.dir}.jpg`), (error) => {
                 if (error) {
                     throw error
                 } else {
-                    console.log('File has been moved to another folder.')
+                    console.log('File been created')
                 }
             })
 
-            res.send('Католог создан')
-        } else {
-            res.send('Dir is good')
-        }
-    });
+    //         res.send('Католог создан')
+    //     } else {
+    //         res.send('Dir is good')
+    //     }
+    // });
 })
 
 app.get('/rename_master_dir', (req, res) => {
@@ -625,7 +625,7 @@ app.use('/var/data/*', (req, res) => {
 
 
 function login(req, res, next) {
-    console.log(JSON.stringify(req.headers.authorization))
+    console.log(JSON.stringify(req.headers.authorization, USER))
     if (JSON.stringify(req.headers.authorization) === '"' + USER + '"') {
         next()
     } else {
