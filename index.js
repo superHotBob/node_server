@@ -648,7 +648,7 @@ app.post('/enter', (req, res) => {
 
 const storageConfig = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, `var/data/${req.query.name}`);
+        cb(null, '../../data/images');
     },
     filename: (req, file, cb) => {
         cb(null, file.originalname);
@@ -656,7 +656,7 @@ const storageConfig = multer.diskStorage({
 });
 const files = []
 app.use(multer({ storage: storageConfig }).single("file"));
-app.post("/upl", (req, res) => {
+app.post("/upl", (req, res) => {    
     if (!req.file) {
         res.send("No file upload")
     } else {
@@ -664,7 +664,7 @@ app.post("/upl", (req, res) => {
         res.send('req.file.filename')
     }
     // const file = req.files.image;
-    // const path = __dirname + "/var/data/" + file.name;
+    // const path = "../../data/images/" + req.file.originalname;
 
     // file.mv(path, (err) => {
     //     if (err) {
