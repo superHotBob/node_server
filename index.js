@@ -457,7 +457,7 @@ app.get('/createclientfolder', login, (req, res) => {
     // fs.access(__dirname + `/var/data/${req.query.dir}`, (err) => {
     //     if (err) {
     //         fs.mkdirSync(__dirname + `/var/data/${req.query.dir}`);
-            fs.copyFile((__dirname + '/main.jpg'), (`/data/images/${req.query.dir}.jpg`), (error) => {
+            fs.copyFile((__dirname + '/main.jpg'), (`/data/images/${req.query.dir} + '.jpg'`), (error) => {
                 if (error) {
                     throw error
                 } else {
