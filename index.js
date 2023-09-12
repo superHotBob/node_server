@@ -612,8 +612,8 @@ app.use('/var/data/*', (req, res) => {
 
 
 function login(req, res, next) {  
-    console.log(JSON.stringify(req.headers.authorization) === '"' + USER + '"') 
-    if (JSON.stringify(req.headers.authorization) === '"' + USER + '"') {
+    console.log(JSON.stringify(req.headers.authorization) === 'master' ) 
+    if (JSON.stringify(req.headers.authorization) === 'master' ) {
         next()
     } else {
         return res.status(404).send('user not found');
@@ -623,7 +623,7 @@ function login(req, res, next) {
 app.use('/', express.static(__dirname + '/build'));
 
 app.post('/enter', (req, res) => {
-    if (req.body.name === USER && req.body.password === PASSWORD) {
+    if (req.body.name === 'master' && req.body.password === 'place') {
         res.status(200).send({ "message": "ok" })
     } else {
         res.status(200).send({ "message": "Hello bob" })
