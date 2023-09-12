@@ -612,8 +612,8 @@ app.use('/var/data/*', (req, res) => {
 
 
 function login(req, res, next) {
-    console.log(req.headers.authorization , ADMIN)
-    if (req.headers.authorization === ADMIN ) {
+    console.log(req.headers.authorization , "master")
+    if (req.headers.authorization === "master" ) {
         next()
     } else {
         return res.status(404).send('not login');
