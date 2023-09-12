@@ -611,12 +611,12 @@ app.use('/var/data/*', (req, res) => {
 // })
 
 
-function login(req, res, next) {  
-    console.log(JSON.stringify(req.headers.authorization) === 'master' ) 
-    if (JSON.stringify(req.headers.authorization) === 'master' ) {
+function login(req, res, next) {
+    console.log(req.headers.authorization === USER)
+    if (req.headers.authorization === USER ) {
         next()
     } else {
-        return res.status(404).send('user not found');
+        return res.status(404).send('not login');
     }
 
 }
