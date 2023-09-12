@@ -611,7 +611,8 @@ app.use('/var/data/*', (req, res) => {
 // })
 
 
-function login(req, res, next) {    
+function login(req, res, next) {  
+    console.log(JSON.stringify(req.headers.authorization) === '"' + USER + '"') 
     if (JSON.stringify(req.headers.authorization) === '"' + USER + '"') {
         next()
     } else {

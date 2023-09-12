@@ -6,7 +6,7 @@
   "scripts": {
     "start": "index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "develop" : "nodemon index.js"
+    "develop": "nodemon index.js"
   },
   "author": "i",
   "license": "ISC",
@@ -24,7 +24,7 @@
     "formidable": "^2.1.1",
     "greensms": "^1.9.1",
     "ip": "^1.1.8",
-    "multer": "^1.4.5-lts.1",    
+    "multer": "^1.4.5-lts.1",
     "pg": "^8.10.0",
     "postgres": "^3.3.4",
     "sync-request": "^6.1.0"
