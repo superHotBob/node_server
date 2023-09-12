@@ -23,7 +23,7 @@ app.use(bodyParser.json());
 const dotenv = require("dotenv");
 dotenv.config();
 
-const { PGUSER, PGPASSWORD, PASSWORD, USER, USERCALL, PASSWORDCALL } = process.env;
+const { PGUSER, PGPASSWORD, PASSWORD, ADMIN, USERCALL, PASSWORDCALL } = process.env;
 const URL = `postgres://${PGUSER}:${PGPASSWORD}@ep-yellow-mountain-679652.eu-central-1.aws.neon.tech/neondb?sslmode=require&options=project%3Dep-yellow-mountain-679652`;
 const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 const sql = postgres(URL, { ssl: 'require' });
@@ -612,14 +612,15 @@ app.use('/var/data/*', (req, res) => {
 
 
 function login(req, res, next) {
-    console.log(req.headers.authorization , USER)
-    if (req.headers.authorization === USER ) {
+    console.log(req.headers.authorization , ADMIN)
+    if (req.headers.authorization === ADMIN ) {
         next()
     } else {
         return res.status(404).send('not login');
     }
 
 }
+
 app.use('/', express.static(__dirname + '/build'));
 
 app.post('/enter', (req, res) => {
