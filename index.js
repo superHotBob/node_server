@@ -11,7 +11,7 @@ const postgres = require('postgres');
 const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
 const rateLimit = require('express-rate-limit');
-const { Client } = require('pg');
+const Pool = require('pg').Pool;
 const apiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minutes
     max: 3, // Limit each IP to 3 requests per `window` (here, per 15 minutes)
@@ -28,7 +28,7 @@ const URL = `postgres://${PGUSER}:${PGPASSWORD}@ep-yellow-mountain-679652.eu-cen
 const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 const sql = postgres(URL, { ssl: 'require' });
 
-const clientdb = new Client({
+const clientdb = new Pool({
     user: 'client',
     host: '5.35.5.23',
     database: 'postgres',
@@ -36,80 +36,76 @@ const clientdb = new Client({
     port: 5432,
 })
 clientdb.connect(function (err) {
-    if (err) throw err;
+    if (err) {
+        console.log(err)
+    }
     console.log("Connected!");
 });
 
 app.use(cors({ origin: '*' }));
 app.use(express.static('public'));
 
-app.get('/var/data/*', (req, res) => {
-    let pat = __dirname + req.path
-    res.sendFile(pat)
-})
+
 
 
 app.get('/find_master', login, async (req, res) => {
-    const result = await sql`
+    const { rows } =  await clientdb.query(`
         select 
         phone,
         name,
         nikname,
         city,
         blocked
-        from users 
-        where phone = ${req.query.phone} and blocked = '0'
-    `;
-    res.send(result)
+        from "masters" 
+        where phone = $1 and blocked = '0'
+    `,[req.query.phone]);
+    res.send(rows)
 })
 
 app.get('/locked', login, async (req, res) => {
-    const result = await sql`
-        select 
-        phone,     
-        blocked date
-        from clients 
-        where blocked != '0'
-    `;
-    res.send(result)
+    const { rows } = await clientdb.query(`
+        select phone, blocked date
+        from "clients" 
+        where "blocked" != '0'
+    `);
+   
+    res.send(rows)
 })
 
 
 
 app.get('/deletereview', login, async (req, res) => {
-    const result = await sql`
-        update orders 
+    const { rows } = await clientdb.query(`
+        update "orders" 
         set review = null,
         set stars = null
-        where id = ${req.query.id}
-    `;
-    res.send(result)
+        where id = $1
+    `,[req.query.id]);
+   
+    res.send(rows)
 })
 
 app.get('/get_entres', login, async (req, res) => {  
-    const query = `SELECT * 
-    FROM "history"
-    WHERE "phone" = $1`;
+    const query = `SELECT * FROM "history" WHERE "phone" = $1`;
     const { rows } = await clientdb.query(query, [req.query.phone]);   
     res.send(rows)
-})
+});
 
 
 
 
 app.get("/endedorders", login, async (req, res) => {
     const month = (new Date()).getMonth() + 1
-    const result = await sql`
-    select
-       COUNT(*)
-    from orders
-    where order_month < ${month}
-    `;
-    res.send(result)
+    const { rows } = await clientdb.query(`
+    select COUNT(*)
+    from "orders"
+    where "order_month" < $1
+    `,[month]);   
+    res.send(rows[0].count)
 })
 
 app.get('/reviews', login, async (req, res) => {
-    const result = await sql`
+    const { rows } = await clientdb.query(`
         select
             date_order,
             review,
@@ -119,137 +115,136 @@ app.get('/reviews', login, async (req, res) => {
             master,
             master_name,
             id
-        from orders
-        where (master = ${req.query.name} or client = ${req.query.name}) and review <> '0'
-    `;
-    res.send(result)
+        from "orders"
+        where ( "master" = $1 or "client" = $1 ) and review <> '0'
+    `,[req.query.name]);
+  
+    res.send(rows)
 })
 
 app.get('/blocked', login, async (req, res) => {
-    const user = await sql`
-        update clients 
-        set blocked = CURRENT_DATE
-        where phone = ${req.query.phone}  
+    const { user } = await clientdb.query(`
+        update "clients" 
+        set "blocked" = CURRENT_DATE
+        where "phone" = $1 
         returning nikname , status    
-    `;
+    `,[req.query.phone]);
     const nikname = user[0].nikname
     const status = user[0].status
 
-    if (fs.existsSync(__dirname + `/var/data/${nikname}`)) {
-        fs.rmdir(__dirname + `/var/data/${nikname}`, { recursive: true }, err => {
-            if (err) {
-                throw err
-            }
-            console.log('Каталог удалён')
+    // if (fs.existsSync(__dirname + `/var/data/${nikname}`)) {
+    //     fs.rmdir(__dirname + `/var/data/${nikname}`, { recursive: true }, err => {
+    //         if (err) {
+    //             throw err
+    //         }
+    //         console.log('Каталог удалён')
 
-        })
-    }
+    //     })
+    // }
 
     if (status === 'client') {
-        await sql`
-            delete from adminchat
-            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
-        `;
-        await sql`
-            delete from chat
-            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
-        `;
+        await clientdb.query(`
+            delete from "adminchat"
+            where "sendler_nikname" = $1 or "recipient_nikname" = $1
+        `,[nikname]);
+        await clientdb.query(`
+            delete from "chat"
+            where "sendler_nikname" = $1} or "recipient_nikname" = $1
+        `,[nikname]);
         res.send("Профиль удалён")
 
     } else {
-        await sql`
-            delete from users
-            where nikname = ${nikname}
-        `;
-        await sql`
-            delete from services
-            where nikname = ${nikname}
-        `;
-        await sql`
-            delete from schedule
-            where nikname = ${nikname}
-        `;
-        await sql`
-            delete from  images
-            where nikname = ${nikname}
-        `;
-        await sql`
-            delete from adminchat
-            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
-        `;
-        await sql`
-            delete from chat
-            where sendler_nikname = ${nikname} or recipient_nikname = ${nikname}
-        `;
-
+        await clientdb.query(`
+            delete from "masters"
+            where "nikname" = $1
+        `,[nikname]);
+        await clientdb.query(`
+            delete from "services"
+            where "nikname" = $1
+        `,[nikname]);
+        await clientdb.query(`
+            delete from "schedule"
+            where "nikname" = $1
+        `,[nikname]);
+        await clientdb.query(`
+            delete from  "images"
+            where "nikname" = $1
+        `,[nikname]);
+        await clientdb.query(`
+            delete from "adminchat"
+            where "sendler_nikname" = $1 or "recipient_nikname" = $1
+            `,[nikname]);
+        await clientdb.query(`
+            delete from "chat"
+            where "sendler_nikname" = $1 or "recipient_nikname" = $1
+            `,[nikname]);
+       
         res.send("Профиль удален")
     }
 })
 
 app.get('/changerating', login, async (req, res) => {
-    const update_clients = await sql`
-        update clients 
-        set rating = ${req.query.rating}
-        where nikname = ${req.query.name}
-    `;
+    await clientdb.query(`
+        update "clients" 
+        set "rating" = $1
+        where "nikname" = $1
+    `,[req.query.rating,req.query.name]);
+   
     res.send('Ok')
 })
 app.get('/setreadmessage', login, async (req, res) => {
-    await sql`
-        update adminchat 
-        set read = 't'
-        where chat = ${req.query.chat} and ms_date = ${req.query.date}
-    `;
+    await clientdb.query(`
+        update "adminchat" 
+        set "read" = 't'
+        where "chat" = $1 and "ms_date" = $2
+    `,[req.query.chat,req.query.date]);
+   
     res.send('OK')
 })
 app.get('/deleteblocked', login, async (req, res) => {
-    await sql`
-        delete from clients         
-        where phone = ${req.query.phone}
-    `;
+    await clientdb.query(`
+        delete from "clients"         
+        where "phone" = $1
+    `,[req.query.phone]);
+   
     res.send('Заблокированый пользователь удален')
 })
 
-app.get('/countclients', login, async (req, res) => {
-    let clients = await sql`
-        select count(*)
-        from clients
-        where status = 'client'
-    `
-    res.send(clients[0].count)
-
+app.get('/countclients', login, async (req, res) => {   
+    let { rows } =  await clientdb.query("select count(*) from clients  where status = 'client'")    
+    res.send(rows[0].count)
 })
 
-app.get('/countorders', login, async (req, res) => {
+app.get('/countorders', login, async (req, res) => {   
     const month = (new Date()).getMonth() + 1
-    const result = await sql`
+    const { rows } =  await clientdb.query(`
         select count(*)
-        from orders 
-        where order_month  >= ${month}   
-     `
-    res.send(result[0].count)
+        from "orders" 
+        where "order_month"  >= $1   
+     `,[month]);   
+    res.send(rows[0].count)
 })
 
-app.get('/countmasters', login, async (req, res) => {
-    const result = await sql`
-        select count(*)
-        from users 
-    `;
-    res.send(result[0].count)
+app.get('/countmasters', login, async (req, res) => {  
+    const  { rows } =  await clientdb.query("select count(*) from masters");  
+    res.send(rows[0].count)
 })
 
 app.get('/get_nikname', login, async (req, res) => {
-    const result = await sql`
+    const { rows } =  await clientdb.query(`
         select nikname 
-        from clients 
-        where phone = ${req.query.phone} 
-    `;
-    res.send(result[0].nikname)
+        from "clients" 
+        where "phone" = $1 
+    `,[req.query.phone]);
+    
+    res.send(rows[0].nikname)
 
 })
 
+
 app.get('/clients', login, async (req, res) => {
-    const result = await sql`
+   
+    const { rows } = await clientdb.query(`
         select 
             phone,
             status,
@@ -259,15 +254,17 @@ app.get('/clients', login, async (req, res) => {
             client_password,
             registration,
             rating
-        from clients
-        where blocked = '0'
+        from "clients"
+        where "blocked" = '0'
         ORDER BY 
             registration	
-        limit ${req.query.limit} offset ${req.query.offset}
-    `;
-    if (result) {
-        res.send(result)
+        limit $1 offset $2
+    `,[req.query.limit,req.query.offset]);
+    if (rows) {
+       
+        res.send(rows)
     } else {
+       
         res.send(JSON.stringify({ 'message': 'error' }))
     }
 })
@@ -275,7 +272,7 @@ app.get('/clients', login, async (req, res) => {
 app.get('/find_client', login, async (req, res) => {
     const phone = +req.query.phone
     const nikname = req.query.nikname
-    const result = await sql`
+    const { rows } =  await clientdb.query(`
         select 
             phone,
             status,
@@ -285,55 +282,51 @@ app.get('/find_client', login, async (req, res) => {
             client_password,
             registration,
             rating
-        from clients       
-        where 
-           ( phone::text like ${phone + '%'}
-            or nikname like ${nikname + '%'})
-            and blocked = '0'
-           
-    `;
-    if (result) {
-        res.send(result)
-    } else {
+        from "clients"       
+        where  ( "phone"::text like $1 or "nikname" like $2) and "blocked" = '0'           
+    `,[phone + '%',nikname + '%']);
+
+    if (rows) {      
+       res.send(rows)
+    } else {       
         res.send(JSON.stringify({ 'message': 'error' }))
     }
 })
 app.get('/find_all_images', login, async (req, res) => {
     if (req.query.service === 'все') {
-        const result = await sql`
-            select *          
-            from images           
-        `;
-        res.send(result)
+        const { rows } =  await clientdb.query("select * from images");
+        
+        res.send(rows)
     } else {
-        const result = await sql`
+        const result = await clientdb.query(`
             select *          
-            from images 
-            where service = ${req.query.service}          
-        `;
+            from "images" 
+            where "service" = $1         
+        `,[req.query.service]);
+       
         res.send(result)
     }
 
 })
 app.get('/message', login, async (req, res) => {
-    const result = await sql`
+    const {rows: result } = await clientdb.query(`
     select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
         select distinct on ( chat ) *         
-        from  adminchat  
+        from  "adminchat"  
         where (recipient != 'master' or recipient !='client' or recipient != 'all')  and (recipient = 'администратор' and read = 'true')  or   (sendler = 'администратор' and read = 'false')       
         order by chat, ms_date desc
       ) chat
       order by  ms_date desc
-    `;
-    const result_read = await sql`
+    `,[]);
+    const { rows: result_read } = await clientdb.query(`
     select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
         select distinct on ( chat ) *         
-        from  adminchat  
-        where recipient = 'администратор' and read != 'true'           
+        from  "adminchat"  
+        where "recipient" = 'администратор' and read != 'true'           
         order by chat, ms_date desc
       ) chat
       order by  ms_date desc
-    `;
+    `,[]);
 
 
     if (result) {
@@ -344,12 +337,12 @@ app.get('/message', login, async (req, res) => {
 })
 
 app.get('/admin_user_dialog', login, async (req, res) => {
-    const result = await sql`
+    const { rows } = await clientdb.query(`
         select * from  adminchat       
-        where chat  =  +${req.query.chat}       
-    `;
-    if (result) {
-        res.send(result)
+        where chat  =  +$1       
+    `,[req.query.chat]);
+    if (rows) {
+        res.send(rows)
     } else {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
@@ -360,7 +353,7 @@ app.get('/delete_image', login, async (req, res) => {
         delete from images
         where id= ${req.query.id}
     `;
-    fs.unlink(__dirname + `/var/data/${req.query.nikname}/${req.query.id}` + '.jpg', (err) => {
+    fs.unlink(`/data/images/${req.query.id}` + '.jpg', (err) => {
         if (err) {
             throw err;
         }
@@ -382,7 +375,7 @@ app.get('/deleteuser', async (req, res) => {
 
 
     if (req.query.status === 'client') {
-        console.log(nikname)
+       
 
         await clientdb.query(`DELETE from "clients" WHERE "nikname" = $1`,[nikname]);
         // await sql`
@@ -402,9 +395,9 @@ app.get('/deleteuser', async (req, res) => {
         res.send("Профиль удалён")
         return;
     } else {
-        await clientdb.query(`DELETE from "users" WHERE "nikname" = $1`,[nikname]);
+        await clientdb.query(`DELETE from "masters" WHERE "nikname" = $1`,[nikname]);
         await sql`
-            delete from users
+            delete from masters
             where nikname = ${nikname}
         `;
         await clientdb.query(`DELETE from "clients" WHERE "nikname" = $1`,[nikname]);
@@ -474,32 +467,23 @@ app.get('/createclientfolder',  (req, res) => {
     // });
 })
 
-app.get('/rename_master_dir', (req, res) => {
-    fs.rename(__dirname + '/var/data/' + req.query.oldname, __dirname + '/var/data/' + req.query.newname, function (err) {
+app.get('/rename_master_icon', (req, res) => {
+    fs.rename('/data/images/' + req.query.oldname + '.jpg','/data/images/' + req.query.newname + '.jpg', function (err) {
         if (err) {
-            console.log('Ошибка переименования директории')
+            console.log('Ошибка переименования файла')
         } else {
-            console.log("Successfully renamed the directory.")
-            res.send('Successfully renamed the directory.')
+            console.log("Successfully renamed the file.")
+            res.send('Successfully renamed the file.')
         }
     })
 })
 
 app.post('/answer_message', login, async (req, res) => {
     let dt = Date.now()
-    await sql`
-        insert into adminchat (recipient,recipient_nikname,sendler,sendler_nikname,ms_text,ms_date,chat,read) 
-        values (
-        ${req.body.recipient},
-        ${req.body.recipient_nikname},
-        'администратор',
-        'администратор',  
-        ${req.body.ms_text},
-        ${dt},
-        ${req.body.chat},
-        'f'
-        )  
-    `
+    await clientdb.query(`
+        insert into "adminchat" (recipient,recipient_nikname,sendler,sendler_nikname,ms_text,ms_date,chat) 
+        values ($1,$2,$3,$3,$4,$5,$6)  
+    `,[req.body.recipient,req.body.recipient_nikname,'администратор',req.body.ms_text,dt,req.body.chat]);
     res.send("Сообщение изменено")
 })
 
@@ -520,6 +504,7 @@ app.post('/message', login, async (req, res) => {
     `
     res.status(200).send({ text: "Сообщение добавлено" })
 })
+
 
 app.get('/getsertificats', (req, res) => {
     let sertificats = []
@@ -626,8 +611,7 @@ app.use('/var/data/*', (req, res) => {
 // })
 
 
-function login(req, res, next) {
-    console.log(JSON.stringify(req.headers.authorization, USER))
+function login(req, res, next) {    
     if (JSON.stringify(req.headers.authorization) === '"' + USER + '"') {
         next()
     } else {
