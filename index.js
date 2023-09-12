@@ -612,7 +612,7 @@ app.use('/var/data/*', (req, res) => {
 
 
 function login(req, res, next) {
-    console.log(req.headers.authorization === USER)
+    console.log(req.headers.authorization , USER)
     if (req.headers.authorization === USER ) {
         next()
     } else {
