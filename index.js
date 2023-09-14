@@ -524,7 +524,9 @@ app.use('/var/data/*', (req, res) => {
 });
 
 
+
 function login(req, res, next) {
+    console.log(req.headers.authorization)
     if (req.headers.authorization === "master") {
         next()
     } else {
