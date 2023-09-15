@@ -310,6 +310,16 @@ app.get('/find_all_images', login, async (req, res) => {
     }
 
 })
+app.get('/createclienticon', async (req,res) => {    
+    const copy = "/data/images/" +  req.query.name +  ".jpg"
+    fs.copyFile(__dirname + '/main.jpg', copy, (error) => {
+      if (error) {
+        throw error
+      } else {       
+        res.send('File has been moved to another folder.')
+      }
+    })
+})
 app.get('/message', login, async (req, res) => {
     const { rows: result } = await clientdb.query(`
     select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
