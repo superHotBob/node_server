@@ -24,9 +24,9 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const { PGUSER, PGPASSWORD, PASSWORD, ADMIN, USERCALL, PASSWORDCALL } = process.env;
-const URL = `postgres://${PGUSER}:${PGPASSWORD}@ep-yellow-mountain-679652.eu-central-1.aws.neon.tech/neondb?sslmode=require&options=project%3Dep-yellow-mountain-679652`;
+// const URL = `postgres://${PGUSER}:${PGPASSWORD}@ep-yellow-mountain-679652.eu-central-1.aws.neon.tech/neondb?sslmode=require&options=project%3Dep-yellow-mountain-679652`;
 const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
-const sql = postgres(URL, { ssl: 'require' });
+// const sql = postgres(URL, { ssl: 'require' });
 
 const clientdb = new Pool({
     user: 'client',
@@ -73,7 +73,6 @@ app.get('/locked', login, async (req, res) => {
 })
 
 
-
 app.get('/deletereview', login, async (req, res) => {
     const { rows } = await clientdb.query(`
         update "orders" 
@@ -96,6 +95,8 @@ app.get('/get_entres', login, async (req, res) => {
 
 app.get("/endedorders", login, async (req, res) => {
     const month = (new Date()).getMonth() + 1
+    // const day = (new Date()).getDate()
+    // console.log(day)
     const { rows } = await clientdb.query(`
     select COUNT(*)
     from "orders"
@@ -187,7 +188,7 @@ app.get('/changerating', login, async (req, res) => {
     await clientdb.query(`
         update "clients" 
         set "rating" = $1
-        where "nikname" = $1
+        where "nikname" = $2
     `, [req.query.rating, req.query.name]);
 
     res.send('Ok')
@@ -195,7 +196,7 @@ app.get('/changerating', login, async (req, res) => {
 app.get('/setreadmessage', login, async (req, res) => {
     await clientdb.query(`
         update "adminchat" 
-        set "read" = 't'
+        set "read" = true
         where "chat" = $1 and "ms_date" = $2
     `, [req.query.chat, req.query.date]);
 
@@ -350,7 +351,7 @@ app.get('/admin_user_dialog', login, async (req, res) => {
 
 app.get('/delete_image', login, async (req, res) => {
     fs.unlink(`/data/images/${req.query.id}` + '.jpg', async (err) => {
-        if (err) { return  console.log(err)}
+        if (err) { console.log(err) }
 
         await clientdb.query(`
             delete from "images"
@@ -373,7 +374,7 @@ app.get('/deleteuser', async (req, res) => {
 
 
 
-    if (req.query.status === 'client') {       
+    if (req.query.status === 'client') {
 
         await clientdb.query(`DELETE from "clients" WHERE "nikname" = $1`, [nikname]);
 
@@ -387,7 +388,7 @@ app.get('/deleteuser', async (req, res) => {
         const { rows: images } = await clientdb.query(`
             SELECT FROM "images"
             WHERE "nikname' = $1
-        `,[nikname]);
+        `, [nikname]);
 
 
         await clientdb.query(`DELETE from "masters" WHERE "nikname" = $1`, [nikname]);
@@ -406,20 +407,6 @@ app.get('/deleteuser', async (req, res) => {
 
         res.send("Профиль удален")
     }
-})
-
-
-
-
-app.get('/createclientfolder', (req, res) => {
-    console.log('Create icon', req.query.dir)
-    fs.copyFile((__dirname + '/main.jpg'), (`/data/images/${req.query.dir}.jpg`), (error) => {
-        if (error) {
-            throw error
-        } else {
-            console.log('File been created')
-        }
-    })
 })
 
 app.get('/rename_master_icon', (req, res) => {
@@ -453,14 +440,7 @@ app.post('/message', login, async (req, res) => {
 })
 
 
-app.get('/deletelist', (req, res) => {
-    fs.unlink(__dirname + '/var/data/' + req.query.name + '/' + req.query.list, (err) => {
-        if (err) {
-            throw err;
-        }
-        res.send('Ok')
-    });
-})
+
 
 app.get('/ip', function (req, res) {
     const ipAddress = IP.address();
@@ -513,20 +493,10 @@ app.post('/code', (req, res) => {
         res.status(500).send('Bad')
     }
 })
-app.use('/var/data/*', (req, res) => {
-    const request = url.parse(req.url, true);
-    const action = request.pathname;
-    const filePath = path.join(__dirname, action).split("%20").join(" ");
-    fs.readFile(filePath,
-        function (err, content) {
-            res.end(content);
-        });
-});
 
 
 
-function login(req, res, next) {
-    console.log(req.headers.authorization)
+function login(req, res, next) {    
     if (req.headers.authorization === "master") {
         next()
     } else {
@@ -543,7 +513,6 @@ app.post('/enter', (req, res) => {
         res.status(200).send({ "message": "Hello bob" })
     }
 })
-
 
 const storageConfig = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -575,6 +544,10 @@ app.post("/upl", (req, res) => {
 app.get('/filesformoderate', (req, res) => {
     res.send(files)
 })
+
+
+
+
 
 app.use(express.static(path.join(__dirname, '/public')));
 app.get('*', (req, res) => {
