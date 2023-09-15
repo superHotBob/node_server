@@ -43,6 +43,7 @@ clientdb.connect(function (err) {
 });
 
 app.use(cors({ origin: '*' }));
+
 app.use(express.static('public'));
 
 
@@ -432,7 +433,7 @@ app.post('/answer_message', login, async (req, res) => {
 app.post('/message', login, async (req, res) => {
     let dt = Date.now()
     await clientdb.query(`
-    insert into "adminchat" (recipient,recipient_nikname,sendler,sendler_nikname,ms_text,ms_date,chat,read) 
+    insert into "adminchat" (recipient, recipient_nikname, sendler, sendler_nikname, ms_text, ms_date, chat) 
     values ($1,$2,$3,$3,$4,$5,$6)
     `, [req.body.recipient, req.body.recipient_nikname, 'администратор', req.body.ms_text, dt, req.body.chat])
 
@@ -446,32 +447,13 @@ app.get('/ip', function (req, res) {
     const ipAddress = IP.address();
     res.send(`<h3>My ip: ${ipAddress}</h3>`);
 });
-app.get('/readtext', (req, res) => {
-    let new_file = (req.query.file).replace('jpg', 'txt')
-    if (fs.existsSync(__dirname + '/var/data/' + new_file)) {
-        fs.readFile(__dirname + '/var/data/' + new_file, 'utf8', (err, data) => {
-            if (err) {
-                console.log("File not found");
-                res.send('');
-            }
-            res.send(data);
-        });
-    } else {
-        res.send('')
-    }
-})
-app.post('/createtag', (req, res) => {
-    let new_fle = (req.body.name).replace('jpg', 'txt')
-    fs.writeFile(__dirname + '/var/data/' + req.query.name + '/' + new_fle, req.body.text, function (err) {
-        if (err) throw err;
-        console.log('File is created successfully.');
-    });
-    res.send("Ok")
-})
+
+
 
 let calls = {}
 const code = 1234
 app.post('/call', apiLimiter, (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
     //     client.call.send({to: req.body.tel})
     //    .then((responce) => {
     //         calls[req.body.tel] = +responce.code
