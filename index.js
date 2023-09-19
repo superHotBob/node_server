@@ -11,7 +11,17 @@ const postgres = require('postgres');
 const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
 const rateLimit = require('express-rate-limit');
-const Pool = require('pg').Pool;
+const { Client } = require('pg');
+
+
+const client = new Client({
+    user: 'client',
+    host: '5.35.5.23',
+    database: 'postgres',
+    password: 'client123',   
+    port: 5432,
+})
+client.connect()
 const apiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minutes
     max: 3, // Limit each IP to 3 requests per `window` (here, per 15 minutes)
@@ -23,25 +33,9 @@ app.use(bodyParser.json());
 const dotenv = require("dotenv");
 dotenv.config();
 
-const { PGUSER, PGPASSWORD, PASSWORD, ADMIN, USERCALL, PASSWORDCALL } = process.env;
+const {  USERCALL, PASSWORDCALL } = process.env;
 // const URL = `postgres://${PGUSER}:${PGPASSWORD}@ep-yellow-mountain-679652.eu-central-1.aws.neon.tech/neondb?sslmode=require&options=project%3Dep-yellow-mountain-679652`;
-const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
-// const sql = postgres(URL, { ssl: 'require' });
-
-const clientdb = new Pool({
-    user: 'client',
-    host: '5.35.5.23',
-    database: 'postgres',
-    password: 'client123',
-    port: 5432,
-})
-clientdb.connect(function (err) {
-    if (err) {
-        console.log(err)
-    }
-    console.log("Connected!");
-});
-
+// const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 app.use(cors({ origin: '*' }));
 
 app.use(express.static('public'));
@@ -50,7 +44,15 @@ app.use(express.static('public'));
 
 
 app.get('/find_master', login, async (req, res) => {
-    const { rows } = await clientdb.query(`
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    const { rows } = await client.query(`
         select 
         phone,
         name,
@@ -60,54 +62,100 @@ app.get('/find_master', login, async (req, res) => {
         from "masters" 
         where phone = $1 and blocked = '0'
     `, [req.query.phone]);
+    await client.end()
     res.send(rows)
 })
 
 app.get('/locked', login, async (req, res) => {
-    const { rows } = await clientdb.query(`
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    const { rows } = await client.query(`
         select phone, blocked date
         from "clients" 
         where "blocked" != '0'
     `);
-
+    await client.end()
     res.send(rows)
 })
 
 
+
+
 app.get('/deletereview', login, async (req, res) => {
-    const { rows } = await clientdb.query(`
+    
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    const { rows } = await client.query(`
         update "orders" 
         set review = null,
         set stars = null
         where id = $1
     `, [req.query.id]);
-
+    await client.end()
     res.send(rows)
 })
 
 app.get('/get_entres', login, async (req, res) => {
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
     const query = `SELECT * FROM "history" WHERE "phone" = $1`;
-    const { rows } = await clientdb.query(query, [req.query.phone]);
+    const { rows } = await client.query(query, [req.query.phone]);
+    await client.end()
     res.send(rows)
+});
+
+app.get('/countmasters', login, async (req, res) => {
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    const { rows: masters } = await client.query("select count(*) from masters");
+    const { rows: clients } = await client.query("select count(*) from clients  where status = 'client'");
+    const month = (new Date()).getMonth() + 1;
+    const { rows: endorders } = await client.query(`
+        select COUNT(*) from "orders" where "order_month" < $1 `, [month]);
+    const { rows: orders } = await client.query(`
+        select count(*) from "orders" where "order_month"  >= $1 `, [month]);
+        await client.end()
+        
+    res.json({ masters: masters[0].count, clients: clients[0].count, endorders: endorders[0].count, orders: orders[0].count })
+   
 });
 
 
 
-
-app.get("/endedorders", login, async (req, res) => {
-    const month = (new Date()).getMonth() + 1
-    // const day = (new Date()).getDate()
-    // console.log(day)
-    const { rows } = await clientdb.query(`
-    select COUNT(*)
-    from "orders"
-    where "order_month" < $1
-    `, [month]);
-    res.send(rows[0].count)
-})
-
 app.get('/reviews', login, async (req, res) => {
-    const { rows } = await clientdb.query(`
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    const { rows } = await client.query(`
         select
             date_order,
             review,
@@ -120,12 +168,20 @@ app.get('/reviews', login, async (req, res) => {
         from "orders"
         where ( "master" = $1 or "client" = $1 ) and review <> '0'
     `, [req.query.name]);
-
+    await client.end()
     res.send(rows)
 })
 
 app.get('/blocked', login, async (req, res) => {
-    const { user } = await clientdb.query(`
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    const { user } = await client.query(`
         update "clients" 
         set "blocked" = CURRENT_DATE
         where "phone" = $1 
@@ -145,108 +201,125 @@ app.get('/blocked', login, async (req, res) => {
     // }
 
     if (status === 'client') {
-        await clientdb.query(`
+        await client.query(`
             delete from "adminchat"
             where "sendler_nikname" = $1 or "recipient_nikname" = $1
         `, [nikname]);
-        await clientdb.query(`
+        await client.query(`
             delete from "chat"
             where "sendler_nikname" = $1} or "recipient_nikname" = $1
         `, [nikname]);
         res.send("Профиль удалён")
 
     } else {
-        await clientdb.query(`
+        await client.query(`
             delete from "masters"
             where "nikname" = $1
         `, [nikname]);
-        await clientdb.query(`
+        await client.query(`
             delete from "services"
             where "nikname" = $1
         `, [nikname]);
-        await clientdb.query(`
+        await client.query(`
             delete from "schedule"
             where "nikname" = $1
         `, [nikname]);
-        await clientdb.query(`
+        await client.query(`
             delete from  "images"
             where "nikname" = $1
         `, [nikname]);
-        await clientdb.query(`
+        await client.query(`
             delete from "adminchat"
             where "sendler_nikname" = $1 or "recipient_nikname" = $1
             `, [nikname]);
-        await clientdb.query(`
+        const { rows } = await client.query(`
             delete from "chat"
             where "sendler_nikname" = $1 or "recipient_nikname" = $1
             `, [nikname]);
-
+        await client.end()
         res.send("Профиль удален")
     }
 })
 
 app.get('/changerating', login, async (req, res) => {
-    await clientdb.query(`
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    await client.query(`
         update "clients" 
         set "rating" = $1
         where "nikname" = $2
     `, [req.query.rating, req.query.name]);
-
+    await client.end()
     res.send('Ok')
 })
 app.get('/setreadmessage', login, async (req, res) => {
-    await clientdb.query(`
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    await client.query(`
         update "adminchat" 
         set "read" = true
         where "chat" = $1 and "ms_date" = $2
     `, [req.query.chat, req.query.date]);
-
+    await client.end()
     res.send('OK')
 })
 app.get('/deleteblocked', login, async (req, res) => {
-    await clientdb.query(`
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    await client.query(`
         delete from "clients"         
         where "phone" = $1
     `, [req.query.phone]);
-
+    await client.end()
     res.send('Заблокированый пользователь удален')
 })
 
-app.get('/countclients', login, async (req, res) => {
-    let { rows } = await clientdb.query("select count(*) from clients  where status = 'client'")
-    res.send(rows[0].count)
-})
-
-app.get('/countorders', login, async (req, res) => {
-    const month = (new Date()).getMonth() + 1
-    const { rows } = await clientdb.query(`
-        select count(*)
-        from "orders" 
-        where "order_month"  >= $1   
-     `, [month]);
-    res.send(rows[0].count)
-})
-
-app.get('/countmasters', login, async (req, res) => {
-    const { rows } = await clientdb.query("select count(*) from masters");
-    res.send(rows[0].count)
-})
-
 app.get('/get_nikname', login, async (req, res) => {
-    const { rows } = await clientdb.query(`
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    const { rows } = await client.query(`
         select nikname 
         from "clients" 
         where "phone" = $1 
     `, [req.query.phone]);
-
+    await client.end()
     res.send(rows[0].nikname)
-
 })
 
-
 app.get('/clients', login, async (req, res) => {
-
-    const { rows } = await clientdb.query(`
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    const { rows } = await client.query(`
         select 
             phone,
             status,
@@ -269,12 +342,21 @@ app.get('/clients', login, async (req, res) => {
 
         res.send(JSON.stringify({ 'message': 'error' }))
     }
+    await client.end()
 })
 
 app.get('/find_client', login, async (req, res) => {
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
     const phone = +req.query.phone
     const nikname = req.query.nikname
-    const { rows } = await clientdb.query(`
+    const { rows } = await client.query(`
         select 
             phone,
             status,
@@ -293,35 +375,59 @@ app.get('/find_client', login, async (req, res) => {
     } else {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
+    await client.end();
 })
-app.get('/find_all_images', login, async (req, res) => {
-    if (req.query.service === 'все') {
-        const { rows } = await clientdb.query("select * from images");
 
+app.get('/find_all_images', login, async (req, res) => {
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+
+    if (req.query.service === 'все') {
+
+        const { rows } = await client.query("select * from images");
+
+        await client.end();
         res.send(rows)
     } else {
-        const { rows } = await clientdb.query(`
+
+        const { rows } = await client.query(`
             select *          
             from "images" 
             where "service" = $1         
         `, [req.query.service]);
-
+        await client.end();
         res.send(rows)
     }
 
 })
-app.get('/createclienticon', async (req,res) => {    
-    const copy = "/data/images/" +  req.query.name +  ".jpg"
+
+app.get('/createclienticon', async (req, res) => {
+    const copy = "/data/images/" + req.query.name + ".jpg"
     fs.copyFile(__dirname + '/main.jpg', copy, (error) => {
-      if (error) {
-        throw error
-      } else {       
-        res.send('File has been moved to another folder.')
-      }
+        if (error) {
+            throw error
+        } else {
+            res.send('File has been moved to another folder.')
+        }
     })
 })
 app.get('/message', login, async (req, res) => {
-    const { rows: result } = await clientdb.query(`
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+
+    const { rows: result } = await client.query(`
     select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
         select distinct on ( chat ) *         
         from  "adminchat"  
@@ -330,7 +436,7 @@ app.get('/message', login, async (req, res) => {
       ) chat
       order by  ms_date desc
     `, []);
-    const { rows: result_read } = await clientdb.query(`
+    const { rows: result_read } = await client.query(`
     select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
         select distinct on ( chat ) *         
         from  "adminchat"  
@@ -342,88 +448,114 @@ app.get('/message', login, async (req, res) => {
 
 
     if (result) {
+        await client.end();
         res.send(result_read.concat(result))
     } else {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
+
+    
+
 })
 
 app.get('/admin_user_dialog', login, async (req, res) => {
-    const { rows } = await clientdb.query(`
-        select * from  adminchat       
-        where chat  =  +$1       
-    `, [req.query.chat]);
-    if (rows.length) {
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
+    const { rows } = await client.query('select * from  adminchat where chat = +$1', [req.query.chat]);
+    if (rows.length > 0) {
+        await client.end();
         res.send(rows)
     } else {
+        await client.end();
         res.send(JSON.stringify({ 'message': 'error' }))
     }
+    
 })
 
 app.get('/delete_image', login, async (req, res) => {
     fs.unlink(`/data/images/${req.query.id}` + '.jpg', async (err) => {
         if (err) { console.log(err) }
-
-        await clientdb.query(`
+        const client = await client.connect()
+        await client.query(`
             delete from "images"
             where "id" = $1
         `, [req.query.id]);
         res.send("Delete successfully")
+        await client.end();
     })
 })
+
+
+
+
 
 app.get('/deleteuser', async (req, res) => {
     const nikname = req.query.nikname;
 
-    fs.unlink(`/data/images/${nikname} + '.jpg' `, err => {
-        if (err) {
-            console.log(err)
-        }
-        console.log(' Исонка удалена ')
+    // fs.unlink(`/data/images/${nikname} + '.jpg' `, err => {
+    //     if (err) {
+    //         console.log(err)
+    //     }
+    //     console.log(' Исонка удалена ')
 
+    // })
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
     })
-
+    await client.connect()    
 
 
     if (req.query.status === 'client') {
 
-        await clientdb.query(`DELETE from "clients" WHERE "nikname" = $1`, [nikname]);
+        await client.query(`DELETE from "clients" WHERE "nikname" = $1`, [nikname]);
 
-        await clientdb.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or recipient_nikname = $1`, [nikname]);
+        await client.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`, [nikname]);
 
-        await clientdb.query(`DELETE from "chat" WHERE "sendler_nikname" = $1 or recipient_nikname = $1`, [nikname]);
+        await client.query(`DELETE from "chat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`, [nikname]);
 
         res.send("Профиль удалён")
 
     } else {
-        const { rows: images } = await clientdb.query(`
+        const { rows: images } = await client.query(`
             SELECT FROM "images"
-            WHERE "nikname' = $1
+            WHERE "nikname" = $1
         `, [nikname]);
 
+        await client.query(`DELETE from "masters" WHERE "nikname" = $1`, [nikname]);
 
-        await clientdb.query(`DELETE from "masters" WHERE "nikname" = $1`, [nikname]);
+        await client.query(`DELETE from "clients" WHERE "nikname" = $1`, [nikname]);
 
-        await clientdb.query(`DELETE from "clients" WHERE "nikname" = $1`, [nikname]);
+        await client.query(`DELETE from "services" WHERE "nikname" = $1`, [nikname]);
 
-        await clientdb.query(`DELETE from "services" WHERE "nikname" = $1`, [nikname]);
+        await client.query(`DELETE from "schedule" WHERE "nikname" = $1` , [nikname]);
 
-        await clientdb.query(`DELETE from "schedule" WHERE "nikname" = $1`, [nikname]);
+        await client.query(`DELETE from "images" WHERE "nikname" = $1`, [nikname]);
 
-        await clientdb.query(`DELETE from "images" WHERE "nikname" = $1`, [nikname]);
+        await client.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`
+        , [nikname]);
 
-        await clientdb.query(`DELETE from "adminchat" WHERE "nikname" = $1`, [nikname]);
-
-        await clientdb.query(`DELETE from "chat" WHERE "nikname" = $1`, [nikname]);
+        await client.query(`DELETE from "chat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`
+        , [nikname]);
 
         res.send("Профиль удален")
     }
+    await client.end();
 })
 
 app.get('/rename_master_icon', (req, res) => {
     fs.rename('/data/images/' + req.query.oldname + '.jpg', '/data/images/' + req.query.newname + '.jpg', function (err) {
         if (err) {
-            console.log('Ошибка переименования файла')
+            console.log(err)
         } else {
             console.log("Successfully renamed the file.")
             res.send('Successfully renamed the file.')
@@ -431,23 +563,47 @@ app.get('/rename_master_icon', (req, res) => {
     })
 })
 
+
+
+
+
+
 app.post('/answer_message', login, async (req, res) => {
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
     let dt = Date.now()
-    await clientdb.query(`
+    await client.query(`
         insert into "adminchat" (recipient,recipient_nikname,sendler,sendler_nikname,ms_text,ms_date,chat) 
         values ($1,$2,$3,$3,$4,$5,$6)  
     `, [req.body.recipient, req.body.recipient_nikname, 'администратор', req.body.ms_text, dt, req.body.chat]);
+    await client.end();
     res.send("Сообщение изменено")
+    
 })
 
 app.post('/message', login, async (req, res) => {
+    const client = new Client({
+        user: 'client',
+        host: '5.35.5.23',
+        database: 'postgres',
+        password: 'client123',   
+        port: 5432,
+    })
+    await client.connect()    
     let dt = Date.now()
-    await clientdb.query(`
+    await client.query(`
     insert into "adminchat" (recipient, recipient_nikname, sendler, sendler_nikname, ms_text, ms_date, chat) 
     values ($1,$2,$3,$3,$4,$5,$6)
     `, [req.body.recipient, req.body.recipient_nikname, 'администратор', req.body.ms_text, dt, req.body.chat])
-
+    await client.end();
     res.status(200).send({ text: "Сообщение добавлено" })
+    
 })
 
 
@@ -475,6 +631,7 @@ app.post('/call', apiLimiter, (req, res) => {
 
 })
 
+
 app.post('/code', (req, res) => {
 
     if (calls[req.body.tel] === req.body.number) {
@@ -488,7 +645,7 @@ app.post('/code', (req, res) => {
 
 
 
-function login(req, res, next) {    
+function login(req, res, next) {
     if (req.headers.authorization === "master") {
         next()
     } else {
@@ -514,14 +671,16 @@ const storageConfig = multer.diskStorage({
         cb(null, file.originalname);
     }
 });
+
 const files = []
 app.use(multer({ storage: storageConfig }).single("file"));
 app.post("/upl", (req, res) => {
+    console.log(req)
     if (!req.file) {
         res.send("No file upload")
     } else {
         files.push(req.query.name + '/' + req.file.filename)
-        res.send('req.file.filename')
+        res.send('file uploaded')
     }
     // const file = req.files.image;
     // const path = "../../data/images/" + req.file.originalname;
