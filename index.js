@@ -468,7 +468,7 @@ app.get('/admin_user_dialog', login, async (req, res) => {
     })
     await client.connect()
     const { rows } = await client.query('select * from  adminchat where chat = +$1', [req.query.chat]);
-    if (rows.length > 0) {
+    if (rows.length > 0) {        
         await client.end();
         res.send(rows)
     } else {
@@ -481,13 +481,20 @@ app.get('/admin_user_dialog', login, async (req, res) => {
 app.get('/delete_image', login, async (req, res) => {
     fs.unlink(`/data/images/${req.query.id}` + '.jpg', async (err) => {
         if (err) { console.log(err) }
-        const client = await client.connect()
+        const client = new Client({
+            user: 'client',
+            host: '5.35.5.23',
+            database: 'postgres',
+            password: 'client123',
+            port: 5432,
+        })
+        await client.connect()
         await client.query(`
             delete from "images"
             where "id" = $1
         `, [req.query.id]);
-        res.send("Delete successfully")
         await client.end();
+        res.send("Delete successfully")        
     })
 })
 
@@ -498,13 +505,13 @@ app.get('/delete_image', login, async (req, res) => {
 app.get('/deleteuser', async (req, res) => {
     const nikname = req.query.nikname;
 
-    // fs.unlink(`/data/images/${nikname} + '.jpg' `, err => {
-    //     if (err) {
-    //         console.log(err)
-    //     }
-    //     console.log(' Исонка удалена ')
+    fs.unlink(`/data/images/${nikname} + '.jpg' `, err => {
+        if (err) {
+            console.log(err)
+        }
+        console.log(' Исонка удалена ')
 
-    // })
+    })
     const client = new Client({
         user: 'client',
         host: '5.35.5.23',
