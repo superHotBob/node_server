@@ -12,7 +12,7 @@ const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
 const rateLimit = require('express-rate-limit');
 const { Client } = require('pg');
-app.use(cors());
+app.use(cors({origin: '*'}));
 
 // const client = new Client({
 //     user: 'client',
@@ -679,9 +679,11 @@ app.post("/upl", (req, res) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "X-Requested-With");    
     if (!req.file) {
+        console.log('No upload')
         res.send("No file upload")
     } else {
         files.push(req.query.name + '/' + req.file.filename)
+        console.log('Upload')
         res.send('file uploaded')
     }
     // const file = req.files.image;
