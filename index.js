@@ -477,7 +477,6 @@ app.get('/admin_user_dialog', login, async (req, res) => {
     }
 
 })
-
 app.get('/delete_image', login, async (req, res) => {
     fs.unlink(`/data/images/${req.query.id}` + '.jpg', async (err) => {
         if (err) { console.log(err) }
