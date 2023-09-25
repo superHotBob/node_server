@@ -134,13 +134,17 @@ app.get('/countmasters', login, async (req, res) => {
     const { rows: masters } = await client.query("select count(*) from masters");
     const { rows: clients } = await client.query("select count(*) from clients  where status = 'client'");
     const month = (new Date()).getMonth() + 1;
-    const { rows: endorders } = await client.query(`
-        select COUNT(*) from "orders" where "order_month" < $1 `, [month]);
+    const day = (new Date()).getDate();
+   
+    const { rows:date_order } = await client.query(`
+        select date_order from "orders" where "order_month" = $1 `, [month]);
+    let current_month = date_order.map(i=>i.date_order.split(',')[0]).filter(i=>+i<day).length
+
     const { rows: orders } = await client.query(`
         select count(*) from "orders" where "order_month"  >= $1 `, [month]);
     await client.end()
 
-    res.json({ masters: masters[0].count, clients: clients[0].count, endorders: endorders[0].count, orders: orders[0].count })
+    res.json({ masters: masters[0].count, clients: clients[0].count, endorders: current_month, orders: orders[0].count })
 
 });
 
@@ -620,6 +624,7 @@ app.get('/ip', function (req, res) {
     const ipAddress = IP.address();
     res.send(`<h3>My ip: ${ipAddress}</h3>`);
 });
+
 
 
 
