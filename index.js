@@ -435,10 +435,10 @@ app.get('/message', login, async (req, res) => {
     select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
         select distinct on ( chat ) *         
         from  "adminchat"  
-        where (recipient != 'master' or recipient !='client' or recipient != 'all')  and (recipient = 'администратор' and read = 'true')  or   (sendler = 'администратор' and read = 'false')       
+        where (recipient != 'master' or recipient !='client' or recipient != 'all')        
         order by chat, ms_date desc
       ) chat
-      order by  ms_date desc
+      order by ms_date DESC
     `, []);
     const { rows: result_read } = await client.query(`
     select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
@@ -450,9 +450,9 @@ app.get('/message', login, async (req, res) => {
       order by  ms_date desc
     `, []);
 
-
+    await client.end();
     if (result) {
-        await client.end();
+       
         res.send(result_read.concat(result))
     } else {
         res.send(JSON.stringify({ 'message': 'error' }))
@@ -617,29 +617,72 @@ app.post('/message', login, async (req, res) => {
 
 })
 
-
-
-
 app.get('/ip', function (req, res) {
     const ipAddress = IP.address();
     res.send(`<h3>My ip: ${ipAddress}</h3>`);
-});
+})
+
+
 
 
 
 
 let calls = {}
 const code = 1234
-app.post('/call', apiLimiter, (req, res) => {
-    res.set('Access-Control-Allow-Origin', '*');
-    //     client.call.send({to: req.body.tel})
-    //    .then((responce) => {
-    //         calls[req.body.tel] = +responce.code
-    //         console.log(responce.code)       
-    //         res.end("OK")   
-    //     })
-    calls[req.body.tel] = 1234
-    res.end("OK")
+let ips = []
+const awaiting = {}
+app.post('/call',  (req, res) => {    
+
+    if(req.body.code) {
+        if(calls[req.body.tel] === req.body.code) {
+            delete awaiting[req.body.ip]
+            let new_ips = ips.filter(i=>i != req.body.ip)
+            ips = new_ips
+            res.status(200).end('Code is good')
+        } else {
+            res.status(400).end("Code is fall")
+        }
+    } else {
+    if(ips.filter(i=>i=req.body.ip).length < 4 ){ 
+         // res.set('Access-Control-Allow-Origin', '*');
+                    //     client.call.send({to: req.body.tel})
+                    //    .then((responce) => {
+                    //         calls[req.body.tel] = +responce.code
+                    //         console.log(responce.code)       
+                    //         res.end("OK")   
+                    //     })
+                    calls[req.body.tel] = code
+                    awaiting[req.body.ip] = Date.now()
+                    ips.push(req.body.ip)
+                    console.log(ips,calls)
+                    res.status(400).end("Enter code")
+    } else { 
+       
+       
+        
+        
+        if(Date.now() - awaiting[req.body.ip] > 60000) {
+           
+            delete awaiting[req.body.ip]
+            let new_ips = ips.filter(i=>i != req.body.ip)
+
+            ips = new_ips
+            res.status(400).end("Enter code")
+              
+        } else {
+            delete awaiting[req.body.ip]
+            let new_ips = ips.filter(i=>i != req.body.ip)
+
+            ips = new_ips        
+            res.status(500).end('Many attempt')              
+                   
+            
+            
+           
+        }
+    } 
+}
+
 
 })
 
