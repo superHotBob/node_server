@@ -12,15 +12,15 @@ const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
 const rateLimit = require('express-rate-limit');
 const { Client } = require('pg');
-app.use(cors({origin: '*'}));
+app.use(cors({ origin: '*' }));
 
-// const client = new Client({
-//     user: 'client',
-//     host: '5.35.5.23',
-//     database: 'postgres',
-//     password: 'client123',   
-//     port: 5432,
-// })
+const db = {
+    user: 'client',
+    host: '5.35.5.23',
+    database: 'postgres',
+    password: 'client123',
+    port: 5432,
+}
 // client.connect()
 const apiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minutes
@@ -44,36 +44,23 @@ app.use(express.static('public'));
 
 
 app.get('/find_master', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     const { rows } = await client.query(`
         select 
         phone,
         name,
-        nikname,
-        city,
+        nikname,       
         blocked
-        from "masters" 
-        where phone = $1 and blocked = '0'
+        from "clients" 
+        where phone = $1 and blocked != '0'
     `, [req.query.phone]);
     await client.end()
     res.send(rows)
 })
 
 app.get('/locked', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     const { rows } = await client.query(`
         select phone, blocked date
@@ -89,13 +76,7 @@ app.get('/locked', login, async (req, res) => {
 
 app.get('/deletereview', login, async (req, res) => {
 
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     const { rows } = await client.query(`
         update "orders" 
@@ -108,13 +89,7 @@ app.get('/deletereview', login, async (req, res) => {
 })
 
 app.get('/get_entres', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     const query = `SELECT * FROM "history" WHERE "phone" = $1`;
     const { rows } = await client.query(query, [req.query.phone]);
@@ -123,22 +98,16 @@ app.get('/get_entres', login, async (req, res) => {
 });
 
 app.get('/countmasters', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     const { rows: masters } = await client.query("select count(*) from masters");
     const { rows: clients } = await client.query("select count(*) from clients  where status = 'client'");
     const month = (new Date()).getMonth() + 1;
     const day = (new Date()).getDate();
-   
-    const { rows:date_order } = await client.query(`
+
+    const { rows: date_order } = await client.query(`
         select date_order from "orders" where "order_month" = $1 `, [month]);
-    let current_month = date_order.map(i=>i.date_order.split(',')[0]).filter(i=>+i<day).length
+    let current_month = date_order.map(i => i.date_order.split(',')[0]).filter(i => +i < day).length
 
     const { rows: orders } = await client.query(`
         select count(*) from "orders" where "order_month"  >= $1 `, [month]);
@@ -151,13 +120,7 @@ app.get('/countmasters', login, async (req, res) => {
 
 
 app.get('/reviews', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     const { rows } = await client.query(`
         select
@@ -176,33 +139,32 @@ app.get('/reviews', login, async (req, res) => {
     res.send(rows)
 })
 
+
+
 app.get('/blocked', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
-    const { user } = await client.query(`
+    const { rows: user } = await client.query(`
         update "clients" 
         set "blocked" = CURRENT_DATE
         where "phone" = $1 
         returning nikname , status    
     `, [req.query.phone]);
+
     const nikname = user[0].nikname
     const status = user[0].status
 
-    // if (fs.existsSync(__dirname + `/var/data/${nikname}`)) {
-    //     fs.rmdir(__dirname + `/var/data/${nikname}`, { recursive: true }, err => {
-    //         if (err) {
-    //             throw err
-    //         }
-    //         console.log('Каталог удалён')
 
-    //     })
-    // }
+
+
+    fs.unlink(`/data/images/ + ${nikname} + '.jpg'`, (err) => {
+        if (err) {
+
+            console.log('Ошибка удаления иконки');
+        }
+
+        console.log("Иконка удалена");
+    });
 
     if (status === 'client') {
         await client.query(`
@@ -211,8 +173,9 @@ app.get('/blocked', login, async (req, res) => {
         `, [nikname]);
         await client.query(`
             delete from "chat"
-            where "sendler_nikname" = $1} or "recipient_nikname" = $1
+            where "sendler_nikname" = $1 or "recipient_nikname" = $1
         `, [nikname]);
+        await client.end()
         res.send("Профиль удалён")
 
     } else {
@@ -228,15 +191,31 @@ app.get('/blocked', login, async (req, res) => {
             delete from "schedule"
             where "nikname" = $1
         `, [nikname]);
-        await client.query(`
-            delete from  "images"
-            where "nikname" = $1
+        const { rows: images } = await client.query(`
+            select id from "images" where "nikname" = $1
         `, [nikname]);
+        for (const i of images) {
+            fs.unlink(`/data/images/ + ${i} + '.jpg'`, async (err) => {
+                if (err) {
+
+                    console.log('Ошибка удаления изображения');
+                }
+                await client.query(`
+                    delete from  "images"
+                    where "nikname" = $1
+                `, [nikname]);
+
+                console.log("Изображение  удалено");
+            });
+        }
+
+
+
         await client.query(`
             delete from "adminchat"
             where "sendler_nikname" = $1 or "recipient_nikname" = $1
             `, [nikname]);
-        const { rows } = await client.query(`
+        await client.query(`
             delete from "chat"
             where "sendler_nikname" = $1 or "recipient_nikname" = $1
             `, [nikname]);
@@ -246,13 +225,7 @@ app.get('/blocked', login, async (req, res) => {
 })
 
 app.get('/changerating', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     await client.query(`
         update "clients" 
@@ -263,13 +236,7 @@ app.get('/changerating', login, async (req, res) => {
     res.send('Ok')
 })
 app.get('/setreadmessage', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     await client.query(`
         update "adminchat" 
@@ -280,13 +247,7 @@ app.get('/setreadmessage', login, async (req, res) => {
     res.send('OK')
 })
 app.get('/deleteblocked', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     await client.query(`
         delete from "clients"         
@@ -297,13 +258,7 @@ app.get('/deleteblocked', login, async (req, res) => {
 })
 
 app.get('/get_nikname', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     const { rows } = await client.query(`
         select nikname 
@@ -315,13 +270,7 @@ app.get('/get_nikname', login, async (req, res) => {
 })
 
 app.get('/clients', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     const { rows } = await client.query(`
         select 
@@ -350,13 +299,7 @@ app.get('/clients', login, async (req, res) => {
 })
 
 app.get('/find_client', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     const phone = +req.query.phone
     const nikname = req.query.nikname
@@ -383,13 +326,7 @@ app.get('/find_client', login, async (req, res) => {
 })
 
 app.get('/find_all_images', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
 
     if (req.query.service === 'все') {
@@ -422,13 +359,7 @@ app.get('/createclienticon', async (req, res) => {
     })
 })
 app.get('/message', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
 
     const { rows: result } = await client.query(`
@@ -452,7 +383,7 @@ app.get('/message', login, async (req, res) => {
 
     await client.end();
     if (result) {
-       
+
         res.send(result_read.concat(result))
     } else {
         res.send(JSON.stringify({ 'message': 'error' }))
@@ -463,16 +394,10 @@ app.get('/message', login, async (req, res) => {
 })
 
 app.get('/admin_user_dialog', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     const { rows } = await client.query('select * from  adminchat where chat = +$1', [req.query.chat]);
-    if (rows.length > 0) {        
+    if (rows.length > 0) {
         await client.end();
         res.send(rows)
     } else {
@@ -484,20 +409,14 @@ app.get('/admin_user_dialog', login, async (req, res) => {
 app.get('/delete_image', login, async (req, res) => {
     fs.unlink(`/data/images/${req.query.id}` + '.jpg', async (err) => {
         if (err) { console.log(err) }
-        const client = new Client({
-            user: 'client',
-            host: '5.35.5.23',
-            database: 'postgres',
-            password: 'client123',
-            port: 5432,
-        })
+        const client = new Client(db)
         await client.connect()
         await client.query(`
             delete from "images"
             where "id" = $1
         `, [req.query.id]);
         await client.end();
-        res.send("Delete successfully")        
+        res.send("Delete successfully")
     })
 })
 
@@ -515,13 +434,7 @@ app.get('/deleteuser', async (req, res) => {
         console.log(' Исонка удалена ')
 
     })
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
 
 
@@ -580,13 +493,7 @@ app.get('/rename_master_icon', (req, res) => {
 
 
 app.post('/answer_message', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     let dt = Date.now()
     await client.query(`
@@ -599,13 +506,7 @@ app.post('/answer_message', login, async (req, res) => {
 })
 
 app.post('/message', login, async (req, res) => {
-    const client = new Client({
-        user: 'client',
-        host: '5.35.5.23',
-        database: 'postgres',
-        password: 'client123',
-        port: 5432,
-    })
+    const client = new Client(db)
     await client.connect()
     let dt = Date.now()
     await client.query(`
@@ -631,57 +532,57 @@ let calls = {}
 const code = 1234
 let ips = []
 const awaiting = {}
-app.post('/call',  (req, res) => {    
+app.post('/call', (req, res) => {
 
-    if(req.body.code) {
-        if(calls[req.body.tel] === req.body.code) {
+    if (req.body.code) {
+        if (calls[req.body.tel] === req.body.code) {
             delete awaiting[req.body.ip]
-            let new_ips = ips.filter(i=>i != req.body.ip)
+            let new_ips = ips.filter(i => i != req.body.ip)
             ips = new_ips
             res.status(200).end('Code is good')
         } else {
             res.status(400).end("Code is fall")
         }
     } else {
-    if(ips.filter(i=>i=req.body.ip).length < 4 ){ 
-         // res.set('Access-Control-Allow-Origin', '*');
-                    //     client.call.send({to: req.body.tel})
-                    //    .then((responce) => {
-                    //         calls[req.body.tel] = +responce.code
-                    //         console.log(responce.code)       
-                    //         res.end("OK")   
-                    //     })
-                    calls[req.body.tel] = code
-                    awaiting[req.body.ip] = Date.now()
-                    ips.push(req.body.ip)
-                    console.log(ips,calls)
-                    res.status(400).end("Enter code")
-    } else { 
-       
-       
-        
-        
-        if(Date.now() - awaiting[req.body.ip] > 60000) {
-           
-            delete awaiting[req.body.ip]
-            let new_ips = ips.filter(i=>i != req.body.ip)
-
-            ips = new_ips
+        if (ips.filter(i => i = req.body.ip).length < 4) {
+            // res.set('Access-Control-Allow-Origin', '*');
+            //     client.call.send({to: req.body.tel})
+            //    .then((responce) => {
+            //         calls[req.body.tel] = +responce.code
+            //         console.log(responce.code)       
+            //         res.end("OK")   
+            //     })
+            calls[req.body.tel] = code
+            awaiting[req.body.ip] = Date.now()
+            ips.push(req.body.ip)
+            console.log(ips, calls)
             res.status(400).end("Enter code")
-              
         } else {
-            delete awaiting[req.body.ip]
-            let new_ips = ips.filter(i=>i != req.body.ip)
 
-            ips = new_ips        
-            res.status(500).end('Many attempt')              
-                   
-            
-            
-           
+
+
+
+            if (Date.now() - awaiting[req.body.ip] > 60000) {
+
+                delete awaiting[req.body.ip]
+                let new_ips = ips.filter(i => i != req.body.ip)
+
+                ips = new_ips
+                res.status(400).end("Enter code")
+
+            } else {
+                delete awaiting[req.body.ip]
+                let new_ips = ips.filter(i => i != req.body.ip)
+
+                ips = new_ips
+                res.status(500).end('Many attempt')
+
+
+
+
+            }
         }
-    } 
-}
+    }
 
 
 })
@@ -731,7 +632,7 @@ const files = []
 app.use(multer({ storage: storageConfig }).single("file"));
 app.post("/upl", (req, res) => {
     res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "X-Requested-With");    
+    res.header("Access-Control-Allow-Headers", "X-Requested-With");
     if (!req.file) {
         console.log('No upload')
         res.send("No file upload")
