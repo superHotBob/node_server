@@ -70,10 +70,6 @@ app.get('/locked', login, async (req, res) => {
     await client.end()
     res.send(rows)
 })
-
-
-
-
 app.get('/deletereview', login, async (req, res) => {
 
     const client = new Client(db)
@@ -104,16 +100,37 @@ app.get('/countmasters', login, async (req, res) => {
     const { rows: clients } = await client.query("select count(*) from clients  where status = 'client'");
     const month = (new Date()).getMonth() + 1;
     const day = (new Date()).getDate();
+    
 
-    const { rows: date_order } = await client.query(`
-        select date_order from "orders" where "order_month" = $1 `, [month]);
-    let current_month = date_order.map(i => i.date_order.split(',')[0]).filter(i => +i < day).length
+    const { rows: end_order_ended_month } = await client.query(`
+        select date_order 
+        from "orders" 
+        where "order_month" < $1 
+        `, [month]
+    );
+    
+    const { rows: order_month } = await client.query(`
+        select date_order 
+        from "orders" 
+        where "order_month" = $1 
+        `, [month]
+    );
+
+    let ended_orders = order_month.map(i => i.date_order.split(',')[0]).filter(i => +i < day).length;
 
     const { rows: orders } = await client.query(`
-        select count(*) from "orders" where "order_month"  >= $1 `, [month]);
-    await client.end()
+        select count(*) 
+        from "orders" 
+        where "order_month" >= $1 
+        `, [month]
+    );
 
-    res.json({ masters: masters[0].count, clients: clients[0].count, endorders: current_month, orders: orders[0].count })
+
+    await client.end();
+
+    const end_orders = end_order_ended_month.length + ended_orders;
+
+    res.json({ masters: masters[0].count, clients: clients[0].count, endorders: end_orders, orders: orders[0].count })
 
 });
 
