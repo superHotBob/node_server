@@ -108,7 +108,7 @@ app.get('/countmasters', login, async (req, res) => {
         where "order_month" < $1 
         `, [month]
     );
-    
+
     const { rows: order_month } = await client.query(`
         select date_order 
         from "orders" 
@@ -388,20 +388,20 @@ app.get('/message', login, async (req, res) => {
       ) chat
       order by ms_date DESC
     `, []);
-    const { rows: result_read } = await client.query(`
-    select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
-        select distinct on ( chat ) *         
-        from  "adminchat"  
-        where "recipient" = 'администратор' and read != 'true'           
-        order by chat, ms_date desc
-      ) chat
-      order by  ms_date desc
-    `, []);
+    // const { rows: result_read } = await client.query(`
+    // select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
+    //     select distinct on ( chat ) *         
+    //     from  "adminchat"  
+    //     where "recipient" = 'администратор' and read != 'true'           
+    //     order by chat, ms_date desc
+    //   ) chat
+    //   order by  ms_date desc
+    // `, []);
 
     await client.end();
-    if (result) {
 
-        res.send(result_read.concat(result))
+    if (result) {
+        res.send(result)
     } else {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
@@ -544,7 +544,6 @@ app.get('/ip', function (req, res) {
 
 
 
-
 let calls = {}
 const code = 1234
 let ips = []
@@ -558,10 +557,10 @@ app.post('/call', (req, res) => {
             ips = new_ips
             res.status(200).end('Code is good')
         } else {
-            res.status(400).end("Code is fall")
+            res.status(404).end("Code is fall")
         }
     } else {
-        if (ips.filter(i => i = req.body.ip).length < 4) {
+        if (ips.filter(i => i === req.body.ip).length < 2) {
             // res.set('Access-Control-Allow-Origin', '*');
             //     client.call.send({to: req.body.tel})
             //    .then((responce) => {
@@ -572,27 +571,22 @@ app.post('/call', (req, res) => {
             calls[req.body.tel] = code
             awaiting[req.body.ip] = Date.now()
             ips.push(req.body.ip)
-            console.log(ips, calls)
+            console.log(ips, calls,awaiting)
             res.status(400).end("Enter code")
         } else {
-
-
-
-
             if (Date.now() - awaiting[req.body.ip] > 60000) {
-
                 delete awaiting[req.body.ip]
                 let new_ips = ips.filter(i => i != req.body.ip)
 
                 ips = new_ips
                 res.status(400).end("Enter code")
 
-            } else {
-                delete awaiting[req.body.ip]
-                let new_ips = ips.filter(i => i != req.body.ip)
-
-                ips = new_ips
-                res.status(500).end('Many attempt')
+            } else {                
+                // let new_ips = ips.filter(i => i != req.body.ip)
+                // ips = new_ips
+                let sec = 60 -  ((Date.now() - awaiting[req.body.ip])/1000).toFixed(0) + ''
+                console.log('sec',sec)
+                res.status(500).end(sec)
 
 
 
