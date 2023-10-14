@@ -34,8 +34,8 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const { USERCALL, PASSWORDCALL } = process.env;
-// const URL = `postgres://${PGUSER}:${PGPASSWORD}@ep-yellow-mountain-679652.eu-central-1.aws.neon.tech/neondb?sslmode=require&options=project%3Dep-yellow-mountain-679652`;
-// const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
+
+const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 
 
 app.use(express.static('public'));
@@ -561,13 +561,13 @@ app.post('/call', (req, res) => {
         }
     } else {
         if (ips.filter(i => i === req.body.ip).length < 2) {
-            // res.set('Access-Control-Allow-Origin', '*');
-            //     client.call.send({to: req.body.tel})
-            //    .then((responce) => {
-            //         calls[req.body.tel] = +responce.code
-            //         console.log(responce.code)       
-            //         res.end("OK")   
-            //     })
+            res.set('Access-Control-Allow-Origin', '*');
+                client.call.send({to: req.body.tel})
+               .then((responce) => {
+                    calls[req.body.tel] = +responce.code
+                    console.log(responce.code)       
+                    res.end("OK")   
+                })
             calls[req.body.tel] = code
             awaiting[req.body.ip] = Date.now()
             ips.push(req.body.ip)
