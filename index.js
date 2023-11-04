@@ -10,7 +10,7 @@ const cors = require('cors');
 const postgres = require('postgres');
 const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
-const rateLimit = require('express-rate-limit');
+
 const { Client } = require('pg');
 app.use(cors({ origin: '*' }));
 
@@ -21,13 +21,7 @@ const db = {
     password: 'client123',
     port: 5432,
 }
-// client.connect()
-const apiLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minutes
-    max: 3, // Limit each IP to 3 requests per `window` (here, per 15 minutes)
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-})
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 const dotenv = require("dotenv");
@@ -444,7 +438,7 @@ app.get('/delete_image', login, async (req, res) => {
 app.get('/deleteuser', async (req, res) => {
     const nikname = req.query.nikname;
 
-    fs.unlink(`/data/images/${nikname} + '.jpg' `, err => {
+    fs.unlink(`/data/images/${nikname}` + '.jpg', err => {
         if (err) {
             console.log(err)
         }
@@ -470,6 +464,17 @@ app.get('/deleteuser', async (req, res) => {
             SELECT FROM "images"
             WHERE "nikname" = $1
         `, [nikname]);
+        console.log(images)
+        for (const i of images) {
+            fs.unlink(`/data/images/${i}` + '.jpg', err => {
+                if (err) {
+                    console.log(err)
+                }
+                console.log(' Изображение  удалено ')
+        
+            })
+        }
+       
 
         await client.query(`DELETE from "masters" WHERE "nikname" = $1`, [nikname]);
 
@@ -478,6 +483,8 @@ app.get('/deleteuser', async (req, res) => {
         await client.query(`DELETE from "services" WHERE "nikname" = $1`, [nikname]);
 
         await client.query(`DELETE from "schedule" WHERE "nikname" = $1`, [nikname]);
+
+        await client.query(`DELETE from "events" WHERE "master_nikname" = $1`, [nikname]);
 
         await client.query(`DELETE from "images" WHERE "nikname" = $1`, [nikname]);
 
@@ -540,17 +547,14 @@ app.get('/ip', function (req, res) {
     res.send(`<h3>My ip: ${ipAddress}</h3>`);
 })
 
-
-
-
-
 let calls = {}
 const code = 1234
 let ips = []
 const awaiting = {}
 app.post('/call', (req, res) => {
-
+    
     if (req.body.code) {
+        console.log(calls)
         if (calls[req.body.tel] === req.body.code) {
             delete awaiting[req.body.ip]
             let new_ips = ips.filter(i => i != req.body.ip)
@@ -561,18 +565,24 @@ app.post('/call', (req, res) => {
         }
     } else {
         if (ips.filter(i => i === req.body.ip).length < 2) {
+          
             res.set('Access-Control-Allow-Origin', '*');
-                client.call.send({to: req.body.tel})
-               .then((responce) => {
-                    calls[req.body.tel] = +responce.code
-                    console.log(responce.code)       
-                    res.end("OK")   
-                })
-            calls[req.body.tel] = code
-            awaiting[req.body.ip] = Date.now()
-            ips.push(req.body.ip)
-            console.log(ips, calls,awaiting)
-            res.status(400).end("Enter code")
+            client.call.send({to: req.body.tel})
+            .then((responce) => {
+                calls[req.body.tel] = +responce.code
+                console.log('code',responce.code)           
+                awaiting[req.body.ip] = Date.now()
+                ips.push(req.body.ip)
+                console.log(ips, calls,awaiting)
+                res.status(200).end("Enter code")
+            })
+
+            // calls[req.body.tel] = code
+            // console.log('code',code)           
+            // awaiting[req.body.ip] = Date.now()
+            // ips.push(req.body.ip)
+            // console.log(ips, calls,awaiting)
+            // res.status(200).end("Enter code")
         } else {
             if (Date.now() - awaiting[req.body.ip] > 60000) {
                 delete awaiting[req.body.ip]
@@ -594,13 +604,10 @@ app.post('/call', (req, res) => {
             }
         }
     }
-
-
 })
 
 
 app.post('/code', (req, res) => {
-
     if (calls[req.body.tel] === req.body.number) {
         delete calls === req.body.tel
         res.status(200).send("OK")
