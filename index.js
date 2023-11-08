@@ -632,10 +632,10 @@ function login(req, res, next) {
 app.use('/', express.static(__dirname + '/build'));
 
 app.post('/enter', (req, res) => {
-    if (req.body.name === 'master' && req.body.password === 'place') {
-        res.status(200).send({ "message": "ok" })
+    if (req.body.name === 'Admin' && req.body.password === 'YMu5sePYCxVq45R') {
+        res.status(200).send({ "message": "Привет Админ" })
     } else {
-        res.status(200).send({ "message": "Hello bob" })
+        res.status(200).send({ "message": "Имя или пароль не верные" })
     }
 })
 
