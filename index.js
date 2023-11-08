@@ -607,6 +607,8 @@ app.post('/call', (req, res) => {
 })
 
 
+
+
 app.post('/code', (req, res) => {
     if (calls[req.body.tel] === req.body.number) {
         delete calls === req.body.tel
@@ -620,7 +622,7 @@ app.post('/code', (req, res) => {
 
 
 function login(req, res, next) {
-    if (req.headers.authorization === "master") {
+    if (req.headers.authorization === "Admin") {
         next()
     } else {
         return res.status(404).send('not login');
