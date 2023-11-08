@@ -633,7 +633,7 @@ app.use('/', express.static(__dirname + '/build'));
 
 app.post('/enter', (req, res) => {
     if (req.body.name === 'Admin' && req.body.password === 'YMu5sePYCxVq45R') {
-        res.status(200).send({ "message": "Привет Админ" })
+        res.status(200).send({ "message": "ok" })
     } else {
         res.status(200).send({ "message": "Имя или пароль не верные" })
     }
