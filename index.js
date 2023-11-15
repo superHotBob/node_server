@@ -11,6 +11,16 @@ const postgres = require('postgres');
 const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
 
+
+const  EventEmitter = require('node:events');
+class MyEmitter extends EventEmitter {}
+const myEmitter = new MyEmitter();
+myEmitter.on('event', function (a, b) {
+    console.log(a, b);
+});    
+
+
+
 const { Client } = require('pg');
 app.use(cors({ origin: '*' }));
 
@@ -88,6 +98,7 @@ app.get('/get_entres', login, async (req, res) => {
 });
 
 app.get('/countmasters', login, async (req, res) => {
+    myEmitter.emit('event',1,2);
     const client = new Client(db)
     await client.connect()
     const { rows: masters } = await client.query("select count(*) from masters");
@@ -632,10 +643,13 @@ function login(req, res, next) {
 app.use('/', express.static(__dirname + '/build'));
 
 app.post('/enter', (req, res) => {
-    if (req.body.name === 'Admin' && req.body.password === 'YMu5sePYCxVq45R') {
+    const { name, password } = req.body;
+    const dt = new Date();
+    console.log(`User ${name} is trying to login  at ${dt} `)
+    if (name === 'Admin' && password === 'YMu5sePYCxVq45R') {
         res.status(200).send({ "message": "ok" })
     } else {
-        res.status(200).send({ "message": "Имя или пароль не верные" })
+        res.status(400).send({ "message": "Имя или пароль не верные" })
     }
 })
 
@@ -683,11 +697,7 @@ app.use(express.static(path.join(__dirname, '/public')));
 app.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, 'build', 'index.html'));
 });
-// app.use((req, res, next) => {
 
-//     res.status(404).send(
-//         "<h1 style='text-align: center;margin: 200px auto' >Page not found on the server</h1>")
-// });
 app.listen(port, () => {
     console.log(`Now listening on port ${port}`);
 });
