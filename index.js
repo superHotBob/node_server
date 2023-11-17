@@ -4,20 +4,23 @@ const port = process.env.PORT || 5000;
 const path = require('path')
 const multer = require('multer')
 const fs = require('fs');
-const url = require("url");
-const IP = require('ip');
+const sharp = require('sharp');
+
 const cors = require('cors');
 const postgres = require('postgres');
 const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
 
 
-const  EventEmitter = require('node:events');
-class MyEmitter extends EventEmitter {}
+const EventEmitter = require('node:events');
+class MyEmitter extends EventEmitter { }
 const myEmitter = new MyEmitter();
 myEmitter.on('event', function (a, b) {
     console.log(a, b);
-});    
+});
+myEmitter.on('error', (error) =>
+    console.log('Error: ', error)
+);
 
 
 
@@ -98,14 +101,14 @@ app.get('/get_entres', login, async (req, res) => {
 });
 
 app.get('/countmasters', login, async (req, res) => {
-    myEmitter.emit('event',1,2);
+    myEmitter.emit('event', 1, 2);
     const client = new Client(db)
     await client.connect()
     const { rows: masters } = await client.query("select count(*) from masters");
     const { rows: clients } = await client.query("select count(*) from clients  where status = 'client'");
     const month = (new Date()).getMonth() + 1;
     const day = (new Date()).getDate();
-    
+
 
     const { rows: end_order_ended_month } = await client.query(`
         select date_order 
@@ -429,8 +432,8 @@ app.get('/admin_user_dialog', login, async (req, res) => {
 
 })
 app.get('/delete_image', login, async (req, res) => {
-    fs.unlink(`/data/images/${req.query.id}` + '.jpg', async (err) => {
-        if (err) { console.log(err) }
+    fs.unlink(`/data/images/${req.query.id}` + '.jpg', async (error) => {
+        if (error) { console.log(error) }
         const client = new Client(db)
         await client.connect()
         await client.query(`
@@ -482,10 +485,10 @@ app.get('/deleteuser', async (req, res) => {
                     console.log(err)
                 }
                 console.log(' Изображение  удалено ')
-        
+
             })
         }
-       
+
 
         await client.query(`DELETE from "masters" WHERE "nikname" = $1`, [nikname]);
 
@@ -553,17 +556,17 @@ app.post('/message', login, async (req, res) => {
 
 })
 
-app.get('/ip', function (req, res) {
-    const ipAddress = IP.address();
-    res.send(`<h3>My ip: ${ipAddress}</h3>`);
-})
+// app.get('/ip', function (req, res) {
+//     const ipAddress = IP.address();
+//     res.send(`<h3>My ip: ${ipAddress}</h3>`);
+// })
 
 let calls = {}
 const code = 1234
 let ips = []
 const awaiting = {}
 app.post('/call', (req, res) => {
-    
+
     if (req.body.code) {
         console.log(calls)
         if (calls[req.body.tel] === req.body.code) {
@@ -576,17 +579,17 @@ app.post('/call', (req, res) => {
         }
     } else {
         if (ips.filter(i => i === req.body.ip).length < 2) {
-          
+
             res.set('Access-Control-Allow-Origin', '*');
-            client.call.send({to: req.body.tel})
-            .then((responce) => {
-                calls[req.body.tel] = +responce.code
-                console.log('code',responce.code)           
-                awaiting[req.body.ip] = Date.now()
-                ips.push(req.body.ip)
-                console.log(ips, calls,awaiting)
-                res.status(200).end("Enter code")
-            })
+            client.call.send({ to: req.body.tel })
+                .then((responce) => {
+                    calls[req.body.tel] = +responce.code
+                    console.log('code', responce.code)
+                    awaiting[req.body.ip] = Date.now()
+                    ips.push(req.body.ip)
+                    console.log(ips, calls, awaiting)
+                    res.status(200).end("Enter code")
+                })
 
             // calls[req.body.tel] = code
             // console.log('code',code)           
@@ -602,11 +605,11 @@ app.post('/call', (req, res) => {
                 ips = new_ips
                 res.status(400).end("Enter code")
 
-            } else {                
+            } else {
                 // let new_ips = ips.filter(i => i != req.body.ip)
                 // ips = new_ips
-                let sec = 60 -  ((Date.now() - awaiting[req.body.ip])/1000).toFixed(0) + ''
-                console.log('sec',sec)
+                let sec = 60 - ((Date.now() - awaiting[req.body.ip]) / 1000).toFixed(0) + ''
+                console.log('sec', sec)
                 res.status(500).end(sec)
 
 
@@ -658,21 +661,44 @@ const storageConfig = multer.diskStorage({
         cb(null, '../../data/images');
     },
     filename: (req, file, cb) => {
-        cb(null, file.originalname);
+        cb(null, 'del'+ file.originalname);
     }
 });
 
-const files = []
+
 app.use(multer({ storage: storageConfig }).single("file"));
-app.post("/upl", (req, res) => {
+app.post("/upload", async (req, res) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "X-Requested-With");
     if (!req.file) {
         console.log('No upload')
         res.send("No file upload")
     } else {
-        files.push(req.query.name + '/' + req.file.filename)
-        console.log('Upload')
+       
+        const newpath = '../../data/images/del' + req.file.originalname;
+        const newpath_1 = '../../data/images/' + req.body.name + '.jpg';
+        const metadata = await sharp(newpath).metadata();
+        const ratio = (metadata.width / metadata.height).toFixed(2);
+
+        sharp(newpath)
+            .resize(500, +(500 / ratio).toFixed(0))
+            .toFormat('jpeg')
+            .jpeg({
+                quality: 100,
+                chromaSubsampling: '4:4:4',
+                force: true
+            })
+            .toFile(newpath_1, function (err) {
+
+                fs.unlink(newpath, async (err) => {
+                    if (err) {
+
+                        console.log('Ошибка записи изображения');
+                    }
+                });
+
+            });
+        console.log('Upload', req.body.name)
         res.send('file uploaded')
     }
     // const file = req.files.image;
@@ -685,9 +711,9 @@ app.post("/upl", (req, res) => {
     //     return res.send({ status: "success", path: path });
     // });
 });
-app.get('/filesformoderate', (req, res) => {
-    res.send(files)
-})
+// app.get('/filesformoderate', (req, res) => {
+//     res.send(files)
+// })
 
 
 
