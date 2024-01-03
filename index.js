@@ -7,22 +7,9 @@ const fs = require('fs');
 const sharp = require('sharp');
 
 const cors = require('cors');
-const postgres = require('postgres');
+// const postgres = require('postgres');
 const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
-
-
-const EventEmitter = require('node:events');
-class MyEmitter extends EventEmitter { }
-const myEmitter = new MyEmitter();
-myEmitter.on('event', function (a, b) {
-    console.log(a, b);
-});
-myEmitter.on('error', (error) =>
-    console.log('Error: ', error)
-);
-
-
 
 const { Client } = require('pg');
 app.use(cors({ origin: '*' }));
@@ -44,11 +31,7 @@ const { USERCALL, PASSWORDCALL } = process.env;
 
 const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 
-
 app.use(express.static('public'));
-
-
-
 
 app.get('/find_master', login, async (req, res) => {
     const client = new Client(db)
@@ -94,55 +77,53 @@ app.get('/deletereview', login, async (req, res) => {
 app.get('/get_entres', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
-    const query = `SELECT * FROM "history" WHERE "phone" = $1`;
-    const { rows } = await client.query(query, [req.query.phone]);
+    const query = `SELECT * FROM "history" WHERE "phone" = $1 order by "date_enter" DESC`;
+    const { rows } = await client.query(query, [req.query.phone]);   
     await client.end()
     res.send(rows)
 });
 
 app.get('/countmasters', login, async (req, res) => {
-    myEmitter.emit('event', 1, 2);
+   
     const client = new Client(db)
     await client.connect()
     const { rows: masters } = await client.query("select count(*) from masters");
     const { rows: clients } = await client.query("select count(*) from clients  where status = 'client'");
     const month = (new Date()).getMonth() + 1;
-    const day = (new Date()).getDate();
-
+    const year = (new Date()).getFullYear();
+    const day = (new Date()).getDate();  
 
     const { rows: end_order_ended_month } = await client.query(`
-        select date_order 
-        from "orders" 
-        where "order_month" < $1 
-        `, [month]
+        select date_order from "orders" 
+        where ("order_month" < $1 and "year" = $2) or "year" < $2
+        `, [month,year]
     );
 
     const { rows: order_month } = await client.query(`
-        select date_order 
-        from "orders" 
-        where "order_month" = $1 
+        select ( date_order ) from "orders" 
+        where "order_month" >= $1 
         `, [month]
     );
 
-    let ended_orders = order_month.map(i => i.date_order.split(',')[0]).filter(i => +i < day).length;
+    let ended_orders = order_month.map(i => i.date_order[0]).filter(i => +i < day).length;
 
     const { rows: orders } = await client.query(`
         select count(*) 
         from "orders" 
-        where "order_month" >= $1 
-        `, [month]
+        where ("order_month" > $1 and "year" = $2) or "year" > $2
+        `, [month,year]
     );
+
+   
 
 
     await client.end();
 
     const end_orders = end_order_ended_month.length + ended_orders;
 
-    res.json({ masters: masters[0].count, clients: clients[0].count, endorders: end_orders, orders: orders[0].count })
+    res.json({ masters: masters[0].count, clients: clients[0].count, endorders: end_orders, activeorders: orders.length })
 
 });
-
-
 
 app.get('/reviews', login, async (req, res) => {
     const client = new Client(db)
@@ -162,9 +143,7 @@ app.get('/reviews', login, async (req, res) => {
     `, [req.query.name]);
     await client.end()
     res.send(rows)
-})
-
-
+});
 
 app.get('/blocked', login, async (req, res) => {
     const client = new Client(db)
@@ -178,9 +157,6 @@ app.get('/blocked', login, async (req, res) => {
 
     const nikname = user[0].nikname
     const status = user[0].status
-
-
-
 
     fs.unlink(`/data/images/ + ${nikname} + '.jpg'`, (err) => {
         if (err) {
@@ -233,9 +209,6 @@ app.get('/blocked', login, async (req, res) => {
                 console.log("Изображение  удалено");
             });
         }
-
-
-
         await client.query(`
             delete from "adminchat"
             where "sendler_nikname" = $1 or "recipient_nikname" = $1
@@ -248,6 +221,7 @@ app.get('/blocked', login, async (req, res) => {
         res.send("Профиль удален")
     }
 })
+
 
 app.get('/changerating', login, async (req, res) => {
     const client = new Client(db)
@@ -450,7 +424,7 @@ app.get('/delete_image', login, async (req, res) => {
 
 
 app.get('/deleteuser', async (req, res) => {
-    const nikname = req.query.nikname;
+    const { nikname, phone } = req.query;
 
     fs.unlink(`/data/images/${nikname}` + '.jpg', err => {
         if (err) {
@@ -462,11 +436,11 @@ app.get('/deleteuser', async (req, res) => {
     const client = new Client(db)
     await client.connect()
 
+    await client.query(`DELETE FROM "history" WHERE "phone" = $1`, [phone]);
+    await client.query(`DELETE from "clients" WHERE "nikname" = $1`, [nikname]);
 
     if (req.query.status === 'client') {
-
-        await client.query(`DELETE from "clients" WHERE "nikname" = $1`, [nikname]);
-
+      
         await client.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`, [nikname]);
 
         await client.query(`DELETE from "chat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`, [nikname]);
@@ -477,8 +451,7 @@ app.get('/deleteuser', async (req, res) => {
         const { rows: images } = await client.query(`
             SELECT FROM "images"
             WHERE "nikname" = $1
-        `, [nikname]);
-        console.log(images)
+        `, [nikname]);       
         for (const i of images) {
             fs.unlink(`/data/images/${i}` + '.jpg', err => {
                 if (err) {
@@ -490,9 +463,7 @@ app.get('/deleteuser', async (req, res) => {
         }
 
 
-        await client.query(`DELETE from "masters" WHERE "nikname" = $1`, [nikname]);
-
-        await client.query(`DELETE from "clients" WHERE "nikname" = $1`, [nikname]);
+        await client.query(`DELETE from "masters" WHERE "nikname" = $1`, [nikname]);       
 
         await client.query(`DELETE from "services" WHERE "nikname" = $1`, [nikname]);
 
@@ -517,10 +488,10 @@ app.get('/rename_master_icon', (req, res) => {
     fs.rename('/data/images/' + req.query.oldname + '.jpg', '/data/images/' + req.query.newname + '.jpg', function (err) {
         if (err) {
             console.log(err)
-            res.send('Ошибка переименования')
+            res.send('Ошибка переименования иконки мастера')
         } else {
-            console.log("Successfully renamed the file.")
-            res.send('Successfully renamed the file.')
+            console.log("Successfully renamed the icon.")
+            res.send('Successfully renamed the ocin.')
         }
     })
 })
@@ -556,10 +527,6 @@ app.post('/message', login, async (req, res) => {
 
 })
 
-// app.get('/ip', function (req, res) {
-//     const ipAddress = IP.address();
-//     res.send(`<h3>My ip: ${ipAddress}</h3>`);
-// })
 
 let calls = {}
 const code = 1234
@@ -567,8 +534,7 @@ let ips = []
 const awaiting = {}
 app.post('/call', (req, res) => {
 
-    if (req.body.code) {
-        console.log(calls)
+    if (req.body.code) {       
         if (calls[req.body.tel] === req.body.code) {
             delete awaiting[req.body.ip]
             let new_ips = ips.filter(i => i != req.body.ip)
@@ -590,31 +556,18 @@ app.post('/call', (req, res) => {
                     console.log(ips, calls, awaiting)
                     res.status(200).end("Enter code")
                 })
-
-            // calls[req.body.tel] = code
-            // console.log('code',code)           
-            // awaiting[req.body.ip] = Date.now()
-            // ips.push(req.body.ip)
-            // console.log(ips, calls,awaiting)
-            // res.status(200).end("Enter code")
+            
         } else {
             if (Date.now() - awaiting[req.body.ip] > 60000) {
                 delete awaiting[req.body.ip]
                 let new_ips = ips.filter(i => i != req.body.ip)
-
                 ips = new_ips
                 res.status(400).end("Enter code")
 
-            } else {
-                // let new_ips = ips.filter(i => i != req.body.ip)
-                // ips = new_ips
+            } else {              
                 let sec = 60 - ((Date.now() - awaiting[req.body.ip]) / 1000).toFixed(0) + ''
                 console.log('sec', sec)
                 res.status(500).end(sec)
-
-
-
-
             }
         }
     }
@@ -684,7 +637,7 @@ app.post("/upload", async (req, res) => {
             .resize(500, +(500 / ratio).toFixed(0))
             .toFormat('jpeg')
             .jpeg({
-                quality: 100,
+                quality: 80,
                 chromaSubsampling: '4:4:4',
                 force: true
             })

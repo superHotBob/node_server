@@ -1,0 +1,14 @@
+Проект состоит из главного сайта : https://masters.place , админки https://admin.masters.place 
+расположеных на сервере Augustin и базы  Postgresql расположеной на сервере AugustinBase.
+
+На сервере Augustin установлен родной ufw - Firewall. 
+Можно посмотреть командой: sudo ufw status.
+
+На сервере Augustin установлен Nginx. 
+Можно посмотреть командой: systemctl status nginx.
+
+На сервере есть две папки, 1-я это  /master_client, в ней расположен фронт на NEXT.JS и вторая /web/node_server,
+в ней расположен бэк на NODE.JS и админка.
+
+На сервере установлен проект-менеджер pm2. Через него запускается фронт  это client и бэк это server. 
+pm2 restart client  or  pm2 restart server .
