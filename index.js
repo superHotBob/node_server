@@ -93,36 +93,20 @@ app.get('/countmasters', login, async (req, res) => {
     const year = (new Date()).getFullYear();
     const day = (new Date()).getDate();  
 
-    const { rows: end_order_ended_month } = await client.query(`
-        select date_order from "orders" 
+    const { rows: end_orders } = await client.query(`
+        select count(*) from "orders" 
         where ("order_month" < $1 and "year" = $2) or "year" < $2
         `, [month,year]
-    );
+    );  
 
-    const { rows: order_month } = await client.query(`
-        select ( date_order ) from "orders" 
-        where "order_month" >= $1 
-        `, [month]
-    );
-
-    let ended_orders = order_month.map(i => i.date_order[0]).filter(i => +i < day).length;
-
-    const { rows: orders } = await client.query(`
-        select count(*) 
-        from "orders" 
-        where ("order_month" > $1 and "year" = $2) or "year" > $2
-        `, [month,year]
-    );
-
-   
-
-
+    const { rows: orders } = await client.query('select count(*) from orders');
     await client.end();
-
-    const end_orders = end_order_ended_month.length + ended_orders;
-
-    res.json({ masters: masters[0].count, clients: clients[0].count, endorders: end_orders, activeorders: orders.length })
-
+    res.json({ 
+        masters: masters[0].count, 
+        clients: clients[0].count, 
+        endorders: end_orders[0].count, 
+        activeorders: orders[0].count - end_orders[0].count 
+    })
 });
 
 app.get('/reviews', login, async (req, res) => {
@@ -288,7 +272,6 @@ app.get('/clients', login, async (req, res) => {
         limit $1 offset $2
     `, [req.query.limit, req.query.offset]);
     if (rows) {
-
         res.send(rows)
     } else {
 
