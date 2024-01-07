@@ -116,6 +116,8 @@ app.get('/reviews', login, async (req, res) => {
         select
             date_order,
             review,
+            year,
+            order_month,
             stars,
             client_name,
             client,
@@ -144,10 +146,8 @@ app.get('/blocked', login, async (req, res) => {
 
     fs.unlink(`/data/images/ + ${nikname} + '.jpg'`, (err) => {
         if (err) {
-
             console.log('Ошибка удаления иконки');
         }
-
         console.log("Иконка удалена");
     });
 
@@ -180,15 +180,14 @@ app.get('/blocked', login, async (req, res) => {
             select id from "images" where "nikname" = $1
         `, [nikname]);
         for (const i of images) {
-            fs.unlink(`/data/images/ + ${i} + '.jpg'`, async (err) => {
+            fs.unlink(`/data/images/ + ${i.id} + '.jpg'`, async (err) => {
                 if (err) {
-
                     console.log('Ошибка удаления изображения');
                 }
                 await client.query(`
                     delete from  "images"
-                    where "nikname" = $1
-                `, [nikname]);
+                    where "id" = $1
+                `, [i.id]);
 
                 console.log("Изображение  удалено");
             });
