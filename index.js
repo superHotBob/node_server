@@ -7,7 +7,6 @@ const fs = require('fs');
 const sharp = require('sharp');
 
 const cors = require('cors');
-// const postgres = require('postgres');
 const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
 
@@ -37,11 +36,7 @@ app.get('/find_master', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
     const { rows } = await client.query(`
-        select 
-        phone,
-        name,
-        nikname,       
-        blocked
+        select phone, name, nikname, blocked
         from "clients" 
         where phone = $1 and blocked != '0'
     `, [req.query.phone]);
@@ -78,34 +73,34 @@ app.get('/get_entres', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
     const query = `SELECT * FROM "history" WHERE "phone" = $1 order by "date_enter" DESC`;
-    const { rows } = await client.query(query, [req.query.phone]);   
+    const { rows } = await client.query(query, [req.query.phone]);
     await client.end()
     res.send(rows)
 });
 
 app.get('/countmasters', login, async (req, res) => {
-   
+
     const client = new Client(db)
     await client.connect()
     const { rows: masters } = await client.query("select count(*) from masters");
     const { rows: clients } = await client.query("select count(*) from clients  where status = 'client'");
     const month = (new Date()).getMonth() + 1;
     const year = (new Date()).getFullYear();
-    const day = (new Date()).getDate();  
+    const day = (new Date()).getDate();
 
     const { rows: end_orders } = await client.query(`
         select count(*) from "orders" 
         where ("order_month" < $1 and "year" = $2) or "year" < $2
-        `, [month,year]
-    );  
+        `, [month, year]
+    );
 
     const { rows: orders } = await client.query('select count(*) from orders');
     await client.end();
-    res.json({ 
-        masters: masters[0].count, 
-        clients: clients[0].count, 
-        endorders: end_orders[0].count, 
-        activeorders: orders[0].count - end_orders[0].count 
+    res.json({
+        masters: masters[0].count,
+        clients: clients[0].count,
+        endorders: end_orders[0].count,
+        activeorders: orders[0].count - end_orders[0].count
     })
 });
 
@@ -179,15 +174,16 @@ app.get('/blocked', login, async (req, res) => {
         const { rows: images } = await client.query(`
             select id from "images" where "nikname" = $1
         `, [nikname]);
-        for (const i of images) {
-            fs.unlink(`/data/images/ + ${i.id} + '.jpg'`, async (err) => {
+        const all_images = images.map(i => i.id)
+        for (const i of all_images) {
+            fs.unlink(`/data/images/ + ${i} + '.jpg'`, async (err) => {
                 if (err) {
                     console.log('Ошибка удаления изображения');
                 }
                 await client.query(`
                     delete from  "images"
                     where "id" = $1
-                `, [i.id]);
+                `, [i]);
 
                 console.log("Изображение  удалено");
             });
@@ -215,7 +211,7 @@ app.get('/changerating', login, async (req, res) => {
         where "nikname" = $2
     `, [req.query.rating, req.query.name]);
     await client.end()
-    res.send('Ok')
+    res.send('Рейтинг мастера изменён.')
 })
 app.get('/setreadmessage', login, async (req, res) => {
     const client = new Client(db)
@@ -266,9 +262,7 @@ app.get('/clients', login, async (req, res) => {
             rating
         from "clients"
         where "blocked" = '0'
-        ORDER BY 
-            registration	
-        limit $1 offset $2
+        ORDER BY registration limit $1 offset $2
     `, [req.query.limit, req.query.offset]);
     if (rows) {
         res.send(rows)
@@ -352,15 +346,6 @@ app.get('/message', login, async (req, res) => {
       ) chat
       order by ms_date DESC
     `, []);
-    // const { rows: result_read } = await client.query(`
-    // select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
-    //     select distinct on ( chat ) *         
-    //     from  "adminchat"  
-    //     where "recipient" = 'администратор' and read != 'true'           
-    //     order by chat, ms_date desc
-    //   ) chat
-    //   order by  ms_date desc
-    // `, []);
 
     await client.end();
 
@@ -369,9 +354,6 @@ app.get('/message', login, async (req, res) => {
     } else {
         res.send(JSON.stringify({ 'message': 'error' }))
     }
-
-
-
 })
 
 app.get('/admin_user_dialog', login, async (req, res) => {
@@ -397,7 +379,7 @@ app.get('/delete_image', login, async (req, res) => {
             where "id" = $1
         `, [req.query.id]);
         await client.end();
-        res.send("Delete successfully")
+        res.send("Delete  image successfully")
     })
 })
 
@@ -420,9 +402,10 @@ app.get('/deleteuser', async (req, res) => {
 
     await client.query(`DELETE FROM "history" WHERE "phone" = $1`, [phone]);
     await client.query(`DELETE from "clients" WHERE "nikname" = $1`, [nikname]);
+    await client.query(`DELETE from "orders" WHERE "client" = $1 or "master" = $1`, [nikname]);
 
     if (req.query.status === 'client') {
-      
+
         await client.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`, [nikname]);
 
         await client.query(`DELETE from "chat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`, [nikname]);
@@ -433,8 +416,8 @@ app.get('/deleteuser', async (req, res) => {
         const { rows: images } = await client.query(`
             SELECT FROM "images"
             WHERE "nikname" = $1
-        `, [nikname]);       
-        for (const i of images) {
+        `, [nikname]);
+        for (const i of images.map(a=>a.id)) {
             fs.unlink(`/data/images/${i}` + '.jpg', err => {
                 if (err) {
                     console.log(err)
@@ -445,7 +428,7 @@ app.get('/deleteuser', async (req, res) => {
         }
 
 
-        await client.query(`DELETE from "masters" WHERE "nikname" = $1`, [nikname]);       
+        await client.query(`DELETE from "masters" WHERE "nikname" = $1`, [nikname]);
 
         await client.query(`DELETE from "services" WHERE "nikname" = $1`, [nikname]);
 
@@ -454,6 +437,8 @@ app.get('/deleteuser', async (req, res) => {
         await client.query(`DELETE from "events" WHERE "master_nikname" = $1`, [nikname]);
 
         await client.query(`DELETE from "images" WHERE "nikname" = $1`, [nikname]);
+
+        await client.query(`DELETE from "orders" WHERE "nikname" = $1`, [nikname]);
 
         await client.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`
             , [nikname]);
@@ -501,8 +486,8 @@ app.post('/message', login, async (req, res) => {
     await client.connect()
     let dt = Date.now()
     await client.query(`
-    insert into "adminchat" (recipient, recipient_nikname, sendler, sendler_nikname, ms_text, ms_date, chat) 
-    values ($1,$2,$3,$3,$4,$5,$6)
+        insert into "adminchat" (recipient, recipient_nikname, sendler, sendler_nikname, ms_text, ms_date, chat) 
+        values ($1,$2,$3,$3,$4,$5,$6)
     `, [req.body.recipient, req.body.recipient_nikname, 'администратор', req.body.ms_text, dt, req.body.chat])
     await client.end();
     res.status(200).send({ text: "Сообщение добавлено" })
@@ -516,7 +501,7 @@ let ips = []
 const awaiting = {}
 app.post('/call', (req, res) => {
 
-    if (req.body.code) {       
+    if (req.body.code) {
         if (calls[req.body.tel] === req.body.code) {
             delete awaiting[req.body.ip]
             let new_ips = ips.filter(i => i != req.body.ip)
@@ -535,10 +520,9 @@ app.post('/call', (req, res) => {
                     console.log('code', responce.code)
                     awaiting[req.body.ip] = Date.now()
                     ips.push(req.body.ip)
-                    console.log(ips, calls, awaiting)
                     res.status(200).end("Enter code")
                 })
-            
+
         } else {
             if (Date.now() - awaiting[req.body.ip] > 60000) {
                 delete awaiting[req.body.ip]
@@ -546,7 +530,7 @@ app.post('/call', (req, res) => {
                 ips = new_ips
                 res.status(400).end("Enter code")
 
-            } else {              
+            } else {
                 let sec = 60 - ((Date.now() - awaiting[req.body.ip]) / 1000).toFixed(0) + ''
                 console.log('sec', sec)
                 res.status(500).end(sec)
@@ -580,10 +564,11 @@ function login(req, res, next) {
 
 app.use('/', express.static(__dirname + '/build'));
 
-app.post('/enter', (req, res) => {
-    const { name, password } = req.body;
-    const dt = new Date();
-    console.log(`User ${name} is trying to login  at ${dt} `)
+app.post('/enter', async (req, res) => {
+   
+    const { name, password, ip , city} = req.body;
+    const dt = new Date().toLocaleDateString();
+    console.log(`User ${ip} is trying to login  at ${dt} from ${city}.`)
     if (name === 'Admin' && password === 'YMu5sePYCxVq45R') {
         res.status(200).send({ "message": "ok" })
     } else {
@@ -596,7 +581,7 @@ const storageConfig = multer.diskStorage({
         cb(null, '../../data/images');
     },
     filename: (req, file, cb) => {
-        cb(null, 'del'+ file.originalname);
+        cb(null, 'del' + file.originalname);
     }
 });
 
@@ -609,7 +594,7 @@ app.post("/upload", async (req, res) => {
         console.log('No upload')
         res.send("No file upload")
     } else {
-       
+
         const newpath = '../../data/images/del' + req.file.originalname;
         const newpath_1 = '../../data/images/' + req.body.name + '.jpg';
         const metadata = await sharp(newpath).metadata();
@@ -617,6 +602,7 @@ app.post("/upload", async (req, res) => {
 
         sharp(newpath)
             .resize(500, +(500 / ratio).toFixed(0))
+            .withMetadata()
             .toFormat('jpeg')
             .jpeg({
                 quality: 80,
