@@ -5,10 +5,23 @@
 Можно посмотреть командой: sudo ufw status.
 
 На сервере Augustin установлен Nginx. 
+На нём запускаются два прокси сервера для работы https://masters.client с localhost:3000 и 
+https://admin.masters.client c localhost:5000.
+
 Можно посмотреть командой: systemctl status nginx.
+
 
 На сервере есть две папки, 1-я это  /master_client, в ней расположен фронт на NEXT.JS и вторая /web/node_server,
 в ней расположен бэк на NODE.JS и админка.
 
-На сервере установлен проект-менеджер pm2. Через него запускается фронт  это client и бэк это server. 
-pm2 restart client  or  pm2 restart server .
+На сервере Augustin установлен проект-менеджер pm2. Через него запускается фронт сервер  localhost:3000
+это client и бэк localhost:5000 - это server и админка в папке build. Client подкачивается с git командой git pull 
+и билдится npm run build. Потом нужно сделать pm2 restart client. Server подкачивается также и делаем
+pm2 restart server .
+
+В папке /data/images сохраняются все изображения в формате jpg. Доступ к ним https://masters.place/images/*.jpg. 
+Все изображения сжимаются до ширины 500рх утилитой Sharp на бэке.
+
+Git front address: https://github.com/superHotBob/master_client
+Git admin address: https://github.com/superHotBob/master_place_admin
+Git back address: https://github.com/superHotBob/node_server

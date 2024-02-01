@@ -6,6 +6,8 @@ const multer = require('multer')
 const fs = require('fs');
 const sharp = require('sharp');
 
+
+
 const cors = require('cors');
 const GreenSMS = require("greensms");
 const bodyParser = require("body-parser");
@@ -20,6 +22,13 @@ const db = {
     password: 'client123',
     port: 5432,
 }
+
+const mu = process.memoryUsage();
+// # bytes / KB / MB / GB
+const gbNow = mu['heapUsed'] / 1024 / 1024 ;
+const gbRounded = Math.round(gbNow * 100) / 100;
+
+console.log(gbRounded)
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -394,7 +403,7 @@ app.get('/deleteuser', async (req, res) => {
         if (err) {
             console.log(err)
         }
-        console.log(' Исонка удалена ')
+        
 
     })
     const client = new Client(db)
@@ -409,8 +418,8 @@ app.get('/deleteuser', async (req, res) => {
         await client.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`, [nikname]);
 
         await client.query(`DELETE from "chat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`, [nikname]);
-
-        res.send("Профиль удалён")
+        console.log('Профиль клиента - ' , nikname, ', удалён.' );
+        res.send("Профиль  удалён")
 
     } else {
         const { rows: images } = await client.query(`
@@ -438,14 +447,14 @@ app.get('/deleteuser', async (req, res) => {
 
         await client.query(`DELETE from "images" WHERE "nikname" = $1`, [nikname]);
 
-        await client.query(`DELETE from "orders" WHERE "nikname" = $1`, [nikname]);
+       
 
         await client.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`
             , [nikname]);
 
         await client.query(`DELETE from "chat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`
             , [nikname]);
-
+        console.log('Профиль мастера - ' , nikname, ', удалён.' );
         res.send("Профиль удален")
     }
     await client.end();
@@ -458,7 +467,7 @@ app.get('/rename_master_icon', (req, res) => {
             res.send('Ошибка переименования иконки мастера')
         } else {
             console.log("Successfully renamed the icon.")
-            res.send('Successfully renamed the ocin.')
+            res.send('Successfully renamed the icon.')
         }
     })
 })
@@ -496,7 +505,7 @@ app.post('/message', login, async (req, res) => {
 
 
 let calls = {}
-const code = 1234
+
 let ips = []
 const awaiting = {}
 app.post('/call', (req, res) => {
@@ -516,8 +525,7 @@ app.post('/call', (req, res) => {
             res.set('Access-Control-Allow-Origin', '*');
             client.call.send({ to: req.body.tel })
                 .then((responce) => {
-                    calls[req.body.tel] = +responce.code
-                    console.log('code', responce.code)
+                    calls[req.body.tel] = +responce.code                   
                     awaiting[req.body.ip] = Date.now()
                     ips.push(req.body.ip)
                     res.status(200).end("Enter code")
@@ -552,13 +560,13 @@ app.post('/code', (req, res) => {
     }
 })
 
-
+let secret_key = ''
 
 function login(req, res, next) {
-    if (req.headers.authorization === "Admin") {
+    if (secret_key.includes(req.headers.authorization)) {
         next()
     } else {
-        return res.status(404).send('not login');
+        return res.status(500).send('not logining');
     }
 }
 
@@ -566,15 +574,25 @@ app.use('/', express.static(__dirname + '/build'));
 
 app.post('/enter', async (req, res) => {
    
-    const { name, password, ip , city} = req.body;
+    const { name, password, ip , city, key} = req.body;
+
+    if(secret_key.length>100) {
+        secret_key = ''
+    }
+   
+    secret_key = secret_key +  key;
+    
     const dt = new Date().toLocaleDateString();
     console.log(`User ${ip} is trying to login  at ${dt} from ${city}.`)
-    if (name === 'Admin' && password === 'YMu5sePYCxVq45R') {
-        res.status(200).send({ "message": "ok" })
+    if (name === 'Admin' && password === 'YMu5sePYCxVq45R') {   
+        
+        res.status(200).send({"message": "ok"})
     } else {
-        res.status(400).send({ "message": "Имя или пароль не верные" })
+        res.status(404).send({ "message": "Имя или пароль не верные" })
     }
 })
+
+
 
 const storageConfig = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -622,19 +640,9 @@ app.post("/upload", async (req, res) => {
         console.log('Upload', req.body.name)
         res.send('file uploaded')
     }
-    // const file = req.files.image;
-    // const path = "../../data/images/" + req.file.originalname;
-
-    // file.mv(path, (err) => {
-    //     if (err) {
-    //         return res.status(500).send(err);
-    //     }
-    //     return res.send({ status: "success", path: path });
-    // });
+   
 });
-// app.get('/filesformoderate', (req, res) => {
-//     res.send(files)
-// })
+
 
 
 
@@ -646,5 +654,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Now listening on port ${port}`);
+    console.log(`Server listening on port ${port}`);
 });
