@@ -523,7 +523,7 @@ app.post('/call', (req, res) => {
             res.status(404).end("Code is fall")
         }
     } else {
-        if (ips.filter(i => i === req.body.ip).length < 3) {
+        if (ips.filter(i => i === req.body.ip).length < 2) {
             res.set('Access-Control-Allow-Origin', '*');
             client.call.send({ to: req.body.tel })
                 .then((responce) => {
@@ -538,6 +538,16 @@ app.post('/call', (req, res) => {
                 delete awaiting[req.body.ip]
                 let new_ips = ips.filter(i => i != req.body.ip)
                 ips = new_ips
+                res.set('Access-Control-Allow-Origin', '*');
+                client.call.send({ to: req.body.tel })
+                    .then((responce) => {
+                        calls[req.body.tel] = +responce.code                                        
+                        awaiting[req.body.ip] = Date.now()
+                        ips = []
+                        ips.push(req.body.ip)
+                        console.log('after awaiting', ips, responce.code, awaiting)
+                        res.status(200).end("Enter code")
+                    })
                 res.status(400).end("Enter code")
 
             } else {
@@ -548,7 +558,6 @@ app.post('/call', (req, res) => {
         }
     }
 })
-
 
 
 
