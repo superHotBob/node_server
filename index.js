@@ -5,7 +5,16 @@ const path = require('path')
 const multer = require('multer')
 const fs = require('fs');
 const sharp = require('sharp');
+const rateLimit = require('express-rate-limit')
 
+
+const limiter = rateLimit({
+	windowMs: 1 * 60 * 1000, // 15 minutes
+	max: 3, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+	message: {message: `Вы исчерпали лимит попыток, 
+        попробуйте через 5 минут`}
+})
 
 
 const cors = require('cors');
@@ -23,12 +32,7 @@ const db = {
     port: 5432,
 }
 
-// const mu = process.memoryUsage();
-// // # bytes / KB / MB / GB
-// const gbNow = mu['heapUsed'] / 1024 / 1024 ;
-// const gbRounded = Math.round(gbNow * 100) / 100;
 
-// console.log(gbRounded)
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -509,15 +513,14 @@ let calls = {}
 let ips = []
 const awaiting = {}
 
-app.post('/call', (req, res) => {
-   
-    
+app.post('/call', (req, res) => {   
 
     if (req.body.code) {
         if (calls[req.body.tel] === req.body.code) {
             delete awaiting[req.body.ip]
             let new_ips = ips.filter(i => i != req.body.ip)
             ips = new_ips
+            console.log(req.body.tel, ':' , req.body.code)
             res.status(200).end('Code is good')
         } else {
             res.status(404).end("Code is fall")
@@ -526,11 +529,11 @@ app.post('/call', (req, res) => {
         if (ips.filter(i => i === req.body.ip).length < 2) {
             res.set('Access-Control-Allow-Origin', '*');
             client.call.send({ to: req.body.tel })
-                .then((responce) => {
+                .then((responce) => {                               
                     calls[req.body.tel] = +responce.code                                        
                     awaiting[req.body.ip] = Date.now()
                     ips.push(req.body.ip)
-                    console.log(ips, responce.code, awaiting)
+                    // console.log(ips, responce.code, awaiting)
                     res.status(200).end("Enter code")
                 })
         } else {
@@ -541,6 +544,7 @@ app.post('/call', (req, res) => {
                 res.set('Access-Control-Allow-Origin', '*');
                 client.call.send({ to: req.body.tel })
                     .then((responce) => {
+                        
                         calls[req.body.tel] = +responce.code                                        
                         awaiting[req.body.ip] = Date.now()
                         ips = []
@@ -583,7 +587,7 @@ function login(req, res, next) {
 
 app.use('/', express.static(__dirname + '/build'));
 
-app.post('/enter', async (req, res) => {
+app.post('/enter', limiter, async (req, res) => {
    
     const { name, password, ip , city, key} = req.body;
 
