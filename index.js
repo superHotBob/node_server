@@ -9,11 +9,13 @@ const rateLimit = require('express-rate-limit')
 
 
 const limiter = rateLimit({
-	windowMs: 1 * 60 * 1000, // 15 minutes
+	windowMs: 5 * 60 * 1000, // 15 minutes
 	max: 3, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
 	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-	message: {message: `Вы исчерпали лимит попыток, 
-        попробуйте через 5 минут`}
+	message: {message: `Вы исчерпали лимит попыток, попробуйте через 5 минут`},
+    keyGenerator: (req,res) => req.body.ip,
+    handler: (req, res, next, options) =>
+		res.status(429).send('Вы исчерпали лимит попыток, попробуйте через 5 минут')    
 })
 
 
@@ -510,69 +512,75 @@ app.post('/message', login, async (req, res) => {
 
 let calls = {}
 
-let ips = []
-const awaiting = {}
+// let ips = []
+// const awaiting = {}
 
-app.post('/call', (req, res) => {   
-
+app.post('/call',  (req, res) => {    
     if (req.body.code) {
-        if (calls[req.body.tel] === req.body.code) {
-            delete awaiting[req.body.ip]
-            let new_ips = ips.filter(i => i != req.body.ip)
-            ips = new_ips
+        if (calls[req.body.tel] === +req.body.code) {
             console.log(req.body.tel, ':' , req.body.code)
+            // delete awaiting[req.body.ip]
+            // let new_ips = ips.filter(i => i != req.body.ip)
+            // ips = new_ips
+            // console.log(req.body.tel, ':' , req.body.code)
+            delete calls[req.body.tel]
             res.status(200).end('Code is good')
         } else {
             res.status(404).end("Code is fall")
         }
     } else {
-        if (ips.filter(i => i === req.body.ip).length < 2) {
-            res.set('Access-Control-Allow-Origin', '*');
-            client.call.send({ to: req.body.tel })
-                .then((responce) => {                               
-                    calls[req.body.tel] = +responce.code                                        
-                    awaiting[req.body.ip] = Date.now()
-                    ips.push(req.body.ip)
+        // if (ips.filter(i => i === req.body.ip).length < 2) {
+            // calls[req.body.tel] = +req.body.code
+            calls[req.body.tel] = 1234
+            console.log(req.body.tel)
+            // res.set('Access-Control-Allow-Origin', '*');
+            // client.call.send({ to: req.body.tel })
+            //     .then((responce) => {                               
+            //         calls[req.body.tel] = +responce.code                                        
+            //         awaiting[req.body.ip] = Date.now()
+            //         ips.push(req.body.ip)
                     // console.log(ips, responce.code, awaiting)
                     res.status(200).end("Enter code")
-                })
-        } else {
-            if (Date.now() - awaiting[req.body.ip] > 60000) {
-                delete awaiting[req.body.ip]
-                let new_ips = ips.filter(i => i != req.body.ip)
-                ips = new_ips
-                res.set('Access-Control-Allow-Origin', '*');
-                client.call.send({ to: req.body.tel })
-                    .then((responce) => {
+                // })
+        // } else {
+        //     if (Date.now() - awaiting[req.body.ip] > 60000) {
+        //         delete awaiting[req.body.ip]
+        //         let new_ips = ips.filter(i => i != req.body.ip)
+        //         ips = new_ips
+        //         res.set('Access-Control-Allow-Origin', '*');
+        //         client.call.send({ to: req.body.tel })
+        //             .then((responce) => {
                         
-                        calls[req.body.tel] = +responce.code                                        
-                        awaiting[req.body.ip] = Date.now()
-                        ips = []
-                        ips.push(req.body.ip)
-                        console.log('after awaiting', ips, responce.code, awaiting)
-                        res.status(200).end("Enter code")
-                    })
-                res.status(400).end("Enter code")
+        //                 calls[req.body.tel] = +responce.code                                        
+        //                 awaiting[req.body.ip] = Date.now()
+        //                 ips = []
+        //                 ips.push(req.body.ip)
+        //                 console.log('after awaiting', ips, responce.code, awaiting)
+        //                 res.status(200).end("Enter code")
+        //             })
+        //         res.status(400).end("Enter code")
 
-            } else {
-                let sec = 60 - ((Date.now() - awaiting[req.body.ip]) / 1000).toFixed(0) + ''
-                console.log('sec', sec)
-                res.status(500).end(sec)
-            }
-        }
+        //     } else {
+        //         let sec = 60 - ((Date.now() - awaiting[req.body.ip]) / 1000).toFixed(0) + ''
+        //         console.log('sec', sec)
+        //         res.status(500).end(sec)
+        //     }
+        // }
     }
 })
 
 
 
-app.post('/code', (req, res) => {
-    if (calls[req.body.tel] === req.body.number) {
-        delete calls === req.body.tel
-        res.status(200).send("OK")
-    } else {
-        delete calls === req.body.tel
-        res.status(500).send('Bad')
-    }
+app.post('/code', limiter, (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    // calls[req.body.tel] = 1234
+    client.call.send({ to: req.body.tel })
+    .then((responce) => {                               
+        calls[req.body.tel] = +responce.code                                        
+        // awaiting[req.body.ip] = Date.now()
+        // ips.push(req.body.ip)      
+        res.status(200).end("Enter code")
+    })
 })
 
 let secret_key = ''
