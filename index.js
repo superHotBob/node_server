@@ -532,13 +532,16 @@ app.post('/call',  (req, res) => {
 
 app.post('/code', limiter, async (req, res) => {
     const dbclient = new Client(db)
-    await dbclient.connect()
+    await dbclient.connect()    
     let { rows } = await dbclient.query(`SELECT blocked from "clients" WHERE "phone" = $1 `, [req.body.tel]);
-    if( rows[0].blocked != '0' ) {
-        res.send({ message: "Номер заблокирован", statusCode: 429 });
-        await dbclient.end();
-        return
+    if( rows.length != 0) {
+        if( rows[0].blocked != '0' ) {
+            res.send({ message: "Номер заблокирован", statusCode: 429 });
+            await dbclient.end();
+            return
+        }
     }
+   
     await dbclient.end();
    
     res.set('Access-Control-Allow-Origin', '*');
