@@ -6,25 +6,22 @@ const multer = require('multer')
 const fs = require('fs');
 const sharp = require('sharp');
 const rateLimit = require('express-rate-limit')
-
-
+const cors = require('cors');
+const GreenSMS = require("greensms");
+const bodyParser = require("body-parser");
+const { Client } = require('pg');
+const dotenv = require("dotenv");
+dotenv.config();
+const services = ['все','маникюр', 'прически','педикюр', 'макияж', 'массаж', 'барбер', 'ресницы', 'брови', 'депиляция','окрашивание','чистка','стрижка']
 const limiter = rateLimit({
-	windowMs: 5 * 60 * 1000, // 15 minutes
-	max: 3, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+	windowMs: 5 * 60 * 1000, // 5 minutes
+	max: 3, // Limit each IP to 100 requests per `window` (here, per 5 minutes)
 	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 	message: {message: `Вы исчерпали лимит попыток, попробуйте через 5 минут`},
     keyGenerator: (req,res) => req.body.ip,
     handler: (req, res, next, options) =>
-		res.status(429).send('Вы исчерпали лимит попыток, попробуйте через 5 минут')    
-})
-
-
-const cors = require('cors');
-const GreenSMS = require("greensms");
-const bodyParser = require("body-parser");
-
-const { Client } = require('pg');
-app.use(cors({ origin: '*' }));
+		res.send({message: 'Вы исчерпали лимит попыток, попробуйте через 5 минут', statusCode: 429})    
+});
 
 const db = {
     user: 'client',
@@ -33,18 +30,14 @@ const db = {
     password: 'client123',
     port: 5432,
 }
-
-
-
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-const dotenv = require("dotenv");
-dotenv.config();
+let secret_key = '';
 
 const { USERCALL, PASSWORDCALL } = process.env;
-
 const client = new GreenSMS({ user: USERCALL, pass: PASSWORDCALL });
 
+app.use(cors({ origin: '*' }));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded());
 app.use(express.static('public'));
 
 app.get('/find_master', login, async (req, res) => {
@@ -57,8 +50,7 @@ app.get('/find_master', login, async (req, res) => {
     `, [req.query.phone]);
     await client.end()
     res.send(rows)
-})
-
+});
 app.get('/locked', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
@@ -69,9 +61,8 @@ app.get('/locked', login, async (req, res) => {
     `);
     await client.end()
     res.send(rows)
-})
+});
 app.get('/deletereview', login, async (req, res) => {
-
     const client = new Client(db)
     await client.connect()
     const { rows } = await client.query(`
@@ -82,8 +73,7 @@ app.get('/deletereview', login, async (req, res) => {
     `, [req.query.id]);
     await client.end()
     res.send(rows)
-})
-
+});
 app.get('/get_entres', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
@@ -94,7 +84,6 @@ app.get('/get_entres', login, async (req, res) => {
 });
 
 app.get('/countmasters', login, async (req, res) => {
-
     const client = new Client(db)
     await client.connect()
     const { rows: masters } = await client.query("select count(*) from masters");
@@ -216,7 +205,6 @@ app.get('/blocked', login, async (req, res) => {
     }
 })
 
-
 app.get('/changerating', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
@@ -228,6 +216,7 @@ app.get('/changerating', login, async (req, res) => {
     await client.end()
     res.send('Рейтинг мастера изменён.')
 })
+
 app.get('/setreadmessage', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
@@ -315,27 +304,25 @@ app.get('/find_client', login, async (req, res) => {
     await client.end();
 })
 
-app.get('/find_all_images', login, async (req, res) => {
+app.get('/find_all_images/:id', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
 
-    if (req.query.service === 'все') {
+    if (req.params.id  == 0) {
 
         const { rows } = await client.query("select * from images");
 
         await client.end();
         res.send(rows)
     } else {
-
         const { rows } = await client.query(`
             select *          
             from "images" 
             where "service" = $1         
-        `, [req.query.service]);
+        `, [services[req.params.id]]);
         await client.end();
         res.send(rows)
     }
-
 })
 
 app.get('/createclienticon', async (req, res) => {
@@ -348,10 +335,10 @@ app.get('/createclienticon', async (req, res) => {
         }
     })
 })
+
 app.get('/message', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
-
     const { rows: result } = await client.query(`
     select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
         select distinct on ( chat ) *         
@@ -384,43 +371,34 @@ app.get('/admin_user_dialog', login, async (req, res) => {
     }
 
 })
-app.get('/delete_image', login, async (req, res) => {
-    fs.unlink(`/data/images/${req.query.id}` + '.jpg', async (error) => {
+
+app.get('/delete_image/:id', login, async (req, res) => {
+    fs.unlink(`/data/images/${req.params.id}` + '.jpg', async (error) => {
         if (error) { console.log(error) }
         const client = new Client(db)
         await client.connect()
         await client.query(`
             delete from "images"
             where "id" = $1
-        `, [req.query.id]);
+        `, [req.params.id]);
         await client.end();
         res.send("Delete  image successfully")
     })
 })
 
-
-
-
-
 app.get('/deleteuser', async (req, res) => {
     const { nikname, phone } = req.query;
-
     fs.unlink(`/data/images/${nikname}` + '.jpg', err => {
         if (err) {
             console.log(err)
         }
-        
-
     })
     const client = new Client(db)
     await client.connect()
-
     await client.query(`DELETE FROM "history" WHERE "phone" = $1`, [phone]);
     await client.query(`DELETE from "clients" WHERE "nikname" = $1`, [nikname]);
     await client.query(`DELETE from "orders" WHERE "client" = $1 or "master" = $1`, [nikname]);
-
     if (req.query.status === 'client') {
-
         await client.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`, [nikname]);
 
         await client.query(`DELETE from "chat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`, [nikname]);
@@ -441,8 +419,6 @@ app.get('/deleteuser', async (req, res) => {
 
             })
         }
-
-
         await client.query(`DELETE from "masters" WHERE "nikname" = $1`, [nikname]);
 
         await client.query(`DELETE from "services" WHERE "nikname" = $1`, [nikname]);
@@ -451,9 +427,7 @@ app.get('/deleteuser', async (req, res) => {
 
         await client.query(`DELETE from "events" WHERE "master_nikname" = $1`, [nikname]);
 
-        await client.query(`DELETE from "images" WHERE "nikname" = $1`, [nikname]);
-
-       
+        await client.query(`DELETE from "images" WHERE "nikname" = $1`, [nikname]);       
 
         await client.query(`DELETE from "adminchat" WHERE "sendler_nikname" = $1 or "recipient_nikname" = $1`
             , [nikname]);
@@ -465,7 +439,6 @@ app.get('/deleteuser', async (req, res) => {
     }
     await client.end();
 })
-
 app.get('/rename_master_icon', (req, res) => {
     fs.rename('/data/images/' + req.query.oldname + '.jpg', '/data/images/' + req.query.newname + '.jpg', function (err) {
         if (err) {
@@ -477,12 +450,6 @@ app.get('/rename_master_icon', (req, res) => {
         }
     })
 })
-
-
-
-
-
-
 app.post('/answer_message', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
@@ -493,7 +460,6 @@ app.post('/answer_message', login, async (req, res) => {
     `, [req.body.recipient, req.body.recipient_nikname, 'администратор', req.body.ms_text, dt, req.body.chat]);
     await client.end();
     res.send("Сообщение изменено")
-
 })
 
 app.post('/message', login, async (req, res) => {
@@ -512,17 +478,10 @@ app.post('/message', login, async (req, res) => {
 
 let calls = {}
 
-// let ips = []
-// const awaiting = {}
-
 app.post('/call',  (req, res) => {    
     if (req.body.code) {
         if (calls[req.body.tel] === +req.body.code) {
-            console.log(req.body.tel, ':' , req.body.code)
-            // delete awaiting[req.body.ip]
-            // let new_ips = ips.filter(i => i != req.body.ip)
-            // ips = new_ips
-            // console.log(req.body.tel, ':' , req.body.code)
+            console.log(req.body.tel, ':' , req.body.code)           
             delete calls[req.body.tel]
             res.status(200).end('Code is good')
         } else {
@@ -571,19 +530,30 @@ app.post('/call',  (req, res) => {
 
 
 
-app.post('/code', limiter, (req, res) => {
+app.post('/code', limiter, async (req, res) => {
+    const dbclient = new Client(db)
+    await dbclient.connect()
+    let { rows } = await dbclient.query(`SELECT blocked from "clients" WHERE "phone" = $1 `, [req.body.tel]);
+    if( rows[0].blocked != '0' ) {
+        res.send({ message: "Номер заблокирован", statusCode: 429 });
+        await dbclient.end();
+        return
+    }
+    await dbclient.end();
+   
     res.set('Access-Control-Allow-Origin', '*');
+    console.log(req.body.ip, ':', req.body.tel);
     // calls[req.body.tel] = 1234
     client.call.send({ to: req.body.tel })
     .then((responce) => {                               
         calls[req.body.tel] = +responce.code                                        
         // awaiting[req.body.ip] = Date.now()
         // ips.push(req.body.ip)      
-        res.status(200).end("Enter code")
+        res.send({message:"Enter code", statusCode: 200})
     })
 })
 
-let secret_key = ''
+
 
 function login(req, res, next) {
     if (secret_key.includes(req.headers.authorization)) {
@@ -595,26 +565,22 @@ function login(req, res, next) {
 
 app.use('/', express.static(__dirname + '/build'));
 
-app.post('/enter', limiter, async (req, res) => {
-   
+app.post('/enter',  async (req, res) => {   
     const { name, password, ip , city, key} = req.body;
-
-    if(secret_key.length>100) {
+    if(secret_key.length > 100) {
         secret_key = ''
-    }
-   
-    secret_key = secret_key +  key;
-    
+    }   
+     
     const dt = new Date().toLocaleDateString();
+    const crypto = require('crypto').randomBytes(8).toString('hex');
     console.log(`User ${ip} is trying to login  at ${dt} from ${city}.`)
-    if (name === 'Admin' && password === 'YMu5sePYCxVq45R') {   
-        
-        res.status(200).send({"message": "ok"})
+    if (name === 'Admin' && password != 'YMu5sePYCxVq45R') { 
+        secret_key = secret_key +  crypto;      
+        res.status(200).send({"message": "ok","key": crypto})
     } else {
-        res.status(404).send({ "message": "Имя или пароль не верные" })
+        res.status(200).send({ "message": "Имя или пароль не верные" })
     }
 })
-
 
 
 const storageConfig = multer.diskStorage({
@@ -666,16 +632,12 @@ app.post("/upload", async (req, res) => {
    
 });
 
-
-
-
-
-
 app.use(express.static(path.join(__dirname, '/public')));
+
 app.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, 'build', 'index.html'));
 });
 
-app.listen(port, () => {
+app.listen(5000, () => {
     console.log(`Server listening on port ${port}`);
 });
