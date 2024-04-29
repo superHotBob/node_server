@@ -566,7 +566,7 @@ function login(req, res, next) {
 app.use('/', express.static(__dirname + '/build'));
 
 app.post('/enter',  async (req, res) => {   
-    const { name, password, ip , city, key} = req.body;
+    const { name, password, ip , city } = req.body;
     if(secret_key.length > 100) {
         secret_key = ''
     }   
@@ -574,7 +574,7 @@ app.post('/enter',  async (req, res) => {
     const dt = new Date().toLocaleDateString();
     const crypto = require('crypto').randomBytes(8).toString('hex');
     console.log(`User ${ip} is trying to login  at ${dt} from ${city}.`)
-    if (name === 'Admin' && password != 'YMu5sePYCxVq45R') { 
+    if (name === 'Admin' && password == 'YMu5sePYCxVq45R') { 
         secret_key = secret_key +  crypto;      
         res.status(200).send({"message": "ok","key": crypto})
     } else {
