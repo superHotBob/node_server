@@ -108,8 +108,8 @@ app.get('/countmasters', login, async (req, res) => {
     })
 });
 
-app.get('/reviews', login, async (req, res) => {
-    const client = new Client(db)
+app.get('/reviews/:uid', login, async (req, res) => {
+    const client = new Client(db)    
     await client.connect()
     const { rows } = await client.query(`
         select
@@ -125,7 +125,7 @@ app.get('/reviews', login, async (req, res) => {
             id
         from "orders"
         where ( "master" = $1 or "client" = $1 ) and review <> '0'
-    `, [req.query.name]);
+    `, [req.params.uid]);
     await client.end()
     res.send(rows)
 });
@@ -348,9 +348,7 @@ app.get('/message', login, async (req, res) => {
       ) chat
       order by ms_date DESC
     `, []);
-
     await client.end();
-
     if (result) {
         res.send(result)
     } else {
@@ -369,7 +367,6 @@ app.get('/admin_user_dialog', login, async (req, res) => {
         await client.end();
         res.send(JSON.stringify({ 'message': 'error' }))
     }
-
 })
 
 app.get('/delete_image/:id', login, async (req, res) => {
@@ -377,10 +374,7 @@ app.get('/delete_image/:id', login, async (req, res) => {
         if (error) { console.log(error) }
         const client = new Client(db)
         await client.connect()
-        await client.query(`
-            delete from "images"
-            where "id" = $1
-        `, [req.params.id]);
+        await client.query(`delete from "images" where "id" = $1`, [req.params.id]);
         await client.end();
         res.send("Delete  image successfully")
     })
@@ -450,6 +444,13 @@ app.get('/rename_master_icon', (req, res) => {
         }
     })
 })
+app.get('/sendmessages', login, async (req,res) => {
+    const client = new Client(db)
+    await client.connect()
+    const { rows } = await client.query("select * from adminchat where chat = '0'");
+    await client.end();
+    res.send( rows )
+})
 app.post('/answer_message', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
@@ -461,20 +462,18 @@ app.post('/answer_message', login, async (req, res) => {
     await client.end();
     res.send("Сообщение изменено")
 })
-
 app.post('/message', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
     let dt = Date.now()
     await client.query(`
-        insert into "adminchat" (recipient, recipient_nikname, sendler, sendler_nikname, ms_text, ms_date, chat) 
-        values ($1,$2,$3,$3,$4,$5,$6)
+        insert into "adminchat" (recipient, recipient_nikname, 
+            sendler, sendler_nikname, ms_text, ms_date, chat
+        ) values ($1,$2,$3,$3,$4,$5,$6)
     `, [req.body.recipient, req.body.recipient_nikname, 'администратор', req.body.ms_text, dt, req.body.chat])
     await client.end();
     res.status(200).send({ text: "Сообщение добавлено" })
-
 })
-
 
 let calls = {}
 
@@ -528,8 +527,6 @@ app.post('/call',  (req, res) => {
     }
 })
 
-
-
 app.post('/code', limiter, async (req, res) => {
     const dbclient = new Client(db)
     await dbclient.connect()    
@@ -549,15 +546,11 @@ app.post('/code', limiter, async (req, res) => {
     // calls[req.body.tel] = 1234
     client.call.send({ to: req.body.tel })
     .then((responce) => {                               
-        calls[req.body.tel] = +responce.code                                        
-        // awaiting[req.body.ip] = Date.now()
-        // ips.push(req.body.ip)      
+        calls[req.body.tel] = +responce.code 
+         
         res.send({message:"Enter code", statusCode: 200})
     })
 })
-
-
-
 function login(req, res, next) {
     if (secret_key.includes(req.headers.authorization)) {
         next()
@@ -565,26 +558,23 @@ function login(req, res, next) {
         return res.status(500).send('not logining');
     }
 }
-
 app.use('/', express.static(__dirname + '/build'));
 
 app.post('/enter',  async (req, res) => {   
     const { name, password, ip , city } = req.body;
     if(secret_key.length > 100) {
         secret_key = ''
-    }   
-     
+    }     
     const dt = new Date().toLocaleDateString();
     const crypto = require('crypto').randomBytes(8).toString('hex');
     console.log(`User ${ip} is trying to login  at ${dt} from ${city}.`)
-    if (name === 'Admin' && password == 'YMu5sePYCxVq45R') { 
+    if (name === 'Admin' && password === 'YMu5sePYCxVq45R') { 
         secret_key = secret_key +  crypto;      
         res.status(200).send({"message": "ok","key": crypto})
     } else {
         res.status(200).send({ "message": "Имя или пароль не верные" })
     }
-})
-
+});
 
 const storageConfig = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -595,21 +585,17 @@ const storageConfig = multer.diskStorage({
     }
 });
 
-
 app.use(multer({ storage: storageConfig }).single("file"));
 app.post("/upload", async (req, res) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "X-Requested-With");
-    if (!req.file) {
-        console.log('No upload')
+    if (!req.file) {       
         res.send("No file upload")
     } else {
-
         const newpath = '../../data/images/del' + req.file.originalname;
         const newpath_1 = '../../data/images/' + req.body.name + '.jpg';
         const metadata = await sharp(newpath).metadata();
         const ratio = (metadata.width / metadata.height).toFixed(2);
-
         sharp(newpath)
             .resize(500, +(500 / ratio).toFixed(0))
             .withMetadata()
@@ -620,27 +606,21 @@ app.post("/upload", async (req, res) => {
                 force: true
             })
             .toFile(newpath_1, function (err) {
-
                 fs.unlink(newpath, async (err) => {
                     if (err) {
-
                         console.log('Ошибка записи изображения');
                     }
                 });
-
             });
         console.log('Upload', req.body.name)
         res.send('file uploaded')
-    }
-   
+    }   
 });
 
 app.use(express.static(path.join(__dirname, '/public')));
 
-app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, 'build', 'index.html'));
-});
+// app.get('*', (req, res) => {
+//     res.sendFile(path.resolve(__dirname, 'build', 'index.html'));
+// });
 
-app.listen(5000, () => {
-    console.log(`Server listening on port ${port}`);
-});
+app.listen(5000, () => console.log(`Server listening on port ${port}`));
