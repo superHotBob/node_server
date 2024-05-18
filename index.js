@@ -46,7 +46,7 @@ app.get('/find_master', login, async (req, res) => {
     const { rows } = await client.query(`
         select phone, name, nikname, blocked
         from "clients" 
-        where phone = $1 and blocked != '0'
+        where phone = $1 and blocked = '0'
     `, [req.query.phone]);
     await client.end()
     res.send(rows)
@@ -295,7 +295,7 @@ app.get('/find_client', login, async (req, res) => {
         from "clients"       
         where  ( "phone"::text like $1 or "nikname" like $2) and "blocked" = '0'           
     `, [phone + '%', nikname + '%']);
-
+    console.log(rows)
     if (rows) {
         res.send(rows)
     } else {
@@ -619,8 +619,8 @@ app.post("/upload", async (req, res) => {
 
 app.use(express.static(path.join(__dirname, '/public')));
 
-// app.get('*', (req, res) => {
-//     res.sendFile(path.resolve(__dirname, 'build', 'index.html'));
-// });
+app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, 'build', 'index.html'));
+});
 
 app.listen(5000, () => console.log(`Server listening on port ${port}`));
