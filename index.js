@@ -1,6 +1,5 @@
 const express = require('express');
 const app = express();
-const port = process.env.PORT || 5000;
 const path = require('path')
 const multer = require('multer')
 const fs = require('fs');
@@ -62,6 +61,7 @@ app.get('/locked', login, async (req, res) => {
     await client.end()
     res.send(rows)
 });
+
 app.get('/deletereview', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
@@ -139,10 +139,8 @@ app.get('/blocked', login, async (req, res) => {
         where "phone" = $1 
         returning nikname , status    
     `, [req.query.phone]);
-
     const nikname = user[0].nikname
     const status = user[0].status
-
     fs.unlink(`/data/images/ + ${nikname} + '.jpg'`, (err) => {
         if (err) {
             console.log('Ошибка удаления иконки');
@@ -248,7 +246,7 @@ app.get('/get_nikname', login, async (req, res) => {
         where "phone" = $1 
     `, [req.query.phone]);
     await client.end()
-    res.send(rows[0].nikname)
+    res.send(rows)
 })
 
 app.get('/clients', login, async (req, res) => {
@@ -295,7 +293,7 @@ app.get('/find_client', login, async (req, res) => {
         from "clients"       
         where  ( "phone"::text like $1 or "nikname" like $2) and "blocked" = '0'           
     `, [phone + '%', nikname + '%']);
-    console.log(rows)
+   
     if (rows) {
         res.send(rows)
     } else {
@@ -336,18 +334,19 @@ app.get('/createclienticon', async (req, res) => {
     })
 })
 
-app.get('/message', login, async (req, res) => {
+app.get('/messages', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
+    const time_today = Date.now() - 900000000 
     const { rows: result } = await client.query(`
     select chat, recipient, ms_date, sendler, read, recipient_nikname, sendler_nikname from (
         select distinct on ( chat ) *         
         from  "adminchat"  
-        where (recipient != 'master' or recipient !='client' or recipient != 'all')        
+        where (chat > 0 and ms_date > $1)        
         order by chat, ms_date desc
       ) chat
       order by ms_date DESC
-    `, []);
+    `, [time_today]);
     await client.end();
     if (result) {
         res.send(result)
@@ -359,7 +358,23 @@ app.get('/message', login, async (req, res) => {
 app.get('/admin_user_dialog', login, async (req, res) => {
     const client = new Client(db)
     await client.connect()
-    const { rows } = await client.query('select * from  adminchat where chat = +$1', [req.query.chat]);
+    const { rows } = await client.query(`
+    select * from  adminchat where recipient_nikname = $1 or sendler_nikname = $1`
+    , [req.query.nikname]);
+    if (rows.length > 0) {
+        await client.end();
+        res.send(rows)
+    } else {
+        await client.end();
+        res.send(JSON.stringify({ 'message': 'error' }))
+    }
+})
+app.get('/admin_user_dialog_chat', login, async (req, res) => {
+    const client = new Client(db)
+    await client.connect()
+    const { rows } = await client.query(`
+    select * from  adminchat where chat = $1 `
+    , [req.query.chat]);
     if (rows.length > 0) {
         await client.end();
         res.send(rows)
@@ -560,7 +575,8 @@ function login(req, res, next) {
 }
 app.use('/', express.static(__dirname + '/build'));
 
-app.post('/enter',  async (req, res) => {   
+
+app.post('/enter', limiter, async (req, res) => {   
     const { name, password, ip , city } = req.body;
     if(secret_key.length > 100) {
         secret_key = ''
@@ -623,4 +639,4 @@ app.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, 'build', 'index.html'));
 });
 
-app.listen(5000, () => console.log(`Server listening on port ${port}`));
+app.listen(5000, () => console.log(`Server ${process.env.admin || 'Bob'} listening on port 5000`));
